@@ -2,7 +2,11 @@ import { Confirm, Prompt } from "./components/basic_modals.tsx";
 import {
   CommandPalette,
   keyboardHint,
-} from "./components/command_palette.tsx";
+} from "./components/command_palette.
+
+
+
+tsx";
 import { FilterList } from "./components/filter.tsx";
 import { AnythingPicker } from "./components/anything_picker.tsx";
 import { TopBar } from "./components/top_bar.tsx";
@@ -115,7 +119,7 @@ export class MainUI {
   // Progress circle handling
   private progressTimeout?: ReturnType<typeof setTimeout>;
 
-  viewDispatch: (action: Action) => void = () => {};
+  viewDispatch: (action: Action) => void = () => { };
 
   flashNotification(
     message: string,
@@ -431,52 +435,55 @@ export class MainUI {
             }}
           />
         )}
-        <TopBar
-          pageName={
-            !viewState.current ? "" : getNameFromPath(viewState.current.path)
-          }
-          notifications={viewState.notifications}
-          onDismissNotification={(id) => {
-            dispatch({ type: "dismiss-notification", id });
-          }}
-          isOnline={viewState.isOnline}
-          unsavedChanges={viewState.unsavedChanges}
-          isLoading={viewState.isLoading}
-          progressPercentage={viewState.progressPercentage}
-          progressType={viewState.progressType}
-          onRename={async (newName) => {
-            if (client.contentManager.isDocumentEditor()) {
-              if (!newName) return;
-
-              console.log("Now renaming document to...", newName);
-              await client.clientSystem.system.invokeFunction(
-                "index.renameDocumentCommand",
-                [{ document: newName }],
-              );
-            } else {
-              if (!newName) {
-                // Always move cursor to the start of the page
-                client.editorView.dispatch({
-                  selection: { anchor: 0 },
-                });
-                client.focus();
-                return;
-              }
-              console.log("Now renaming page to...", newName);
-              await client.clientSystem.system.invokeFunction(
-                "index.renamePageCommand",
-                [{ page: newName }],
-              );
-              client.focus();
+        <div id="sb-icon-rail" />
+        <div id="sb-nav-panel" />
+        <div id="sb-editor-area">
+          <TopBar
+            pageName={
+              !viewState.current ? "" : getNameFromPath(viewState.current.path)
             }
-          }}
-          actionButtons={[
-            // Vertical menu button
-            ...(viewState.isMobile &&
-            client.config
-              .get<string>("mobileMenuStyle", "hamburger")
-              .includes("hamburger")
-              ? [
+            notifications={viewState.notifications}
+            onDismissNotification={(id) => {
+              dispatch({ type: "dismiss-notification", id });
+            }}
+            isOnline={viewState.isOnline}
+            unsavedChanges={viewState.unsavedChanges}
+            isLoading={viewState.isLoading}
+            progressPercentage={viewState.progressPercentage}
+            progressType={viewState.progressType}
+            onRename={async (newName) => {
+              if (client.contentManager.isDocumentEditor()) {
+                if (!newName) return;
+
+                console.log("Now renaming document to...", newName);
+                await client.clientSystem.system.invokeFunction(
+                  "index.renameDocumentCommand",
+                  [{ document: newName }],
+                );
+              } else {
+                if (!newName) {
+                  // Always move cursor to the start of the page
+                  client.editorView.dispatch({
+                    selection: { anchor: 0 },
+                  });
+                  client.focus();
+                  return;
+                }
+                console.log("Now renaming page to...", newName);
+                await client.clientSystem.system.invokeFunction(
+                  "index.renamePageCommand",
+                  [{ page: newName }],
+                );
+                client.focus();
+              }
+            }}
+            actionButtons={[
+              // Vertical menu button
+              ...(viewState.isMobile &&
+                client.config
+                  .get<string>("mobileMenuStyle", "hamburger")
+                  .includes("hamburger")
+                ? [
                   {
                     icon: featherIcons.Menu,
                     description: "Open Menu",
@@ -489,121 +496,123 @@ export class MainUI {
                     },
                   },
                 ]
-              : []),
-            // Custom action buttons
-            ...actionButtons
-              .filter(
-                (
-                  // Filter out buttons without icons (invalid) and mobile buttons when not in mobile mode
-                  button,
-                ) =>
-                  button.icon &&
-                  (typeof button.mobile === "undefined" ||
-                    button.mobile === viewState.isMobile) &&
-                  (typeof button.standalone === "undefined" ||
-                    button.standalone === viewState.isStandalone),
-              )
-              // Then ensure all buttons have a priority set (by default based on array index)
-              .map((button, index) => ({
-                ...button,
-                priority: button.priority ?? actionButtons.length - index,
-              }))
-              .sort((a, b) => b.priority - a.priority)
-              .map((button) => {
-                const mdiIcon = (mdi as any)[kebabToCamel(button.icon)];
-                let featherIcon = (featherIcons as any)[
-                  kebabToCamel(button.icon)
-                ];
-                if (!featherIcon) {
-                  featherIcon = featherIcons.HelpCircle;
-                }
-                // Build description with keyboard shortcut hint
-                let description = button.description || "";
-                if (button.command) {
-                  const cmd = viewState.commands.get(button.command);
-                  if (cmd) {
-                    const hint = keyboardHint(cmd);
-                    if (hint) {
-                      description = description
-                        ? `${description} (${hint})`
-                        : hint;
+                : []),
+              // Custom action buttons
+              ...actionButtons
+                .filter(
+                  (
+                    // Filter out buttons without icons (invalid) and mobile buttons when not in mobile mode
+                    button,
+                  ) =>
+                    button.icon &&
+                    (typeof button.mobile === "undefined" ||
+                      button.mobile === viewState.isMobile) &&
+                    (typeof button.standalone === "undefined" ||
+                      button.standalone === viewState.isStandalone),
+                )
+                // Then ensure all buttons have a priority set (by default based on array index)
+                .map((button, index) => ({
+                  ...button,
+                  priority: button.priority ?? actionButtons.length - index,
+                }))
+                .sort((a, b) => b.priority - a.priority)
+                .map((button) => {
+                  const mdiIcon = (mdi as any)[kebabToCamel(button.icon)];
+                  let featherIcon = (featherIcons as any)[
+                    kebabToCamel(button.icon)
+                  ];
+                  if (!featherIcon) {
+                    featherIcon = featherIcons.HelpCircle;
+                  }
+                  // Build description with keyboard shortcut hint
+                  let description = button.description || "";
+                  if (button.command) {
+                    const cmd = viewState.commands.get(button.command);
+                    if (cmd) {
+                      const hint = keyboardHint(cmd);
+                      if (hint) {
+                        description = description
+                          ? `${description} (${hint})`
+                          : hint;
+                      }
                     }
                   }
-                }
 
-                return {
-                  icon: mdiIcon ? mdiIcon : featherIcon,
-                  description,
-                  dropdown: button.dropdown,
-                  callback: button.command
-                    ? () => this.client.runCommandByName(button.command!)
-                    : button.run ||
+                  return {
+                    icon: mdiIcon ? mdiIcon : featherIcon,
+                    description,
+                    dropdown: button.dropdown,
+                    callback: button.command
+                      ? () => this.client.runCommandByName(button.command!)
+                      : button.run ||
                       (() => {
                         this.flashNotification(
                           "actionButton did not specify a command or run() callback",
                           "error",
                         );
                       }),
-                  href: "",
-                };
-              }),
-          ]}
-          rhs={
-            !!viewState.panels.rhs.mode && (
+                    href: "",
+                  };
+                }),
+            ]}
+            rhs={
+              !!viewState.panels.rhs.mode && (
+                <div
+                  className="panel"
+                  style={{ flex: viewState.panels.rhs.mode }}
+                />
+              )
+            }
+            lhs={
+              !!viewState.panels.lhs.mode && (
+                <div
+                  className="panel"
+                  style={{ flex: viewState.panels.lhs.mode }}
+                />
+              )
+            }
+            pageNamePrefix={
+              client.currentPageMeta()?.pageDecoration?.prefix ?? ""
+            }
+            cssClass={(client.currentPageMeta()?.pageDecoration?.cssClasses ??
+              [])
+              .join(" ")
+              .replaceAll(/[^a-zA-Z0-9-_ ]/g, "")}
+            mobileMenuStyle={viewState.isMobile
+              ? client.config.get<string>(
+                "mobileMenuStyle",
+                "hamburger",
+              )
+              : undefined}
+            readOnly={
+              viewState.uiOptions.forcedROMode || client.bootConfig.readOnly
+            }
+          />
+          <div id="sb-main">
+            {viewState.panels.lhs.mode !== undefined && (
+              <Panel config={viewState.panels.lhs} editor={client} />
+            )}
+            <div id="sb-editor" />
+            {viewState.panels.rhs.mode !== undefined && (
+              <Panel config={viewState.panels.rhs} editor={client} />
+            )}
+          </div>
+          {viewState.panels.modal.mode !== undefined && (
+            <div className="sb-modal-backdrop">
               <div
-                className="panel"
-                style={{ flex: viewState.panels.rhs.mode }}
-              />
-            )
-          }
-          lhs={
-            !!viewState.panels.lhs.mode && (
-              <div
-                className="panel"
-                style={{ flex: viewState.panels.lhs.mode }}
-              />
-            )
-          }
-          pageNamePrefix={
-            client.currentPageMeta()?.pageDecoration?.prefix ?? ""
-          }
-          cssClass={(client.currentPageMeta()?.pageDecoration?.cssClasses ?? [])
-            .join(" ")
-            .replaceAll(/[^a-zA-Z0-9-_ ]/g, "")}
-          mobileMenuStyle={viewState.isMobile
-            ? client.config.get<string>(
-              "mobileMenuStyle",
-              "hamburger",
-            )
-            : undefined}
-          readOnly={
-            viewState.uiOptions.forcedROMode || client.bootConfig.readOnly
-          }
-        />
-        <div id="sb-main">
-          {viewState.panels.lhs.mode !== undefined && (
-            <Panel config={viewState.panels.lhs} editor={client} />
+                className="sb-modal"
+                style={{ inset: `${viewState.panels.modal.mode}px` }}
+              >
+                <Panel config={viewState.panels.modal} editor={client} />
+              </div>
+            </div>
           )}
-          <div id="sb-editor" />
-          {viewState.panels.rhs.mode !== undefined && (
-            <Panel config={viewState.panels.rhs} editor={client} />
+          {viewState.panels.bhs.mode !== undefined && (
+            <div className="sb-bhs">
+              <Panel config={viewState.panels.bhs} editor={client} />
+            </div>
           )}
         </div>
-        {viewState.panels.modal.mode !== undefined && (
-          <div className="sb-modal-backdrop">
-            <div
-              className="sb-modal"
-              style={{ inset: `${viewState.panels.modal.mode}px` }}
-            >
-              <Panel config={viewState.panels.modal} editor={client} />
-            </div>
-          </div>
-        )}
-        {viewState.panels.bhs.mode !== undefined && (
-          <div className="sb-bhs">
-            <Panel config={viewState.panels.bhs} editor={client} />
-          </div>
-        )}
       </>
     );
   }

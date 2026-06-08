@@ -151,6 +151,13 @@ html {
   --editor-font: "iA-Mono", "Menlo";
   --editor-width: 800px;
 
+  --rail-background-color: #d4d4d4;
+  --rail-icon-color: #555;
+  --rail-icon-active-color: #0772be;
+  --nav-background-color: #ebebeb;
+  --nav-border-color: #cacaca;
+  --nav-text-color: #333;
+
   /* Shared component tokens */
   --danger-color: #dc3545;
   --danger-contrast-color: #fff;
@@ -202,6 +209,13 @@ html[data-theme="dark"] {
   --top-saved-color: #fff;
   --top-unsaved-color: #c7c7c7;
   --top-loading-color: #c7c7c7;
+
+  --rail-background-color: #1e1e1e;
+  --rail-icon-color: #aaa;
+  --rail-icon-active-color: #37a1ed;
+  --nav-background-color: #262626;
+  --nav-border-color: rgb(62, 62, 62);
+  --nav-text-color: #ccc;
 
   --panel-background-color: #111;
   --panel-border-color: rgb(62, 62, 62);
