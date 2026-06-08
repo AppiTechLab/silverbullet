@@ -125,12 +125,16 @@ type ShellBackend interface {
 
 // Auth options for user authentication
 type AuthOptions struct {
-	AuthToken       string `json:"authToken,omitempty"`
-	User            string `json:"user"`
-	Pass            string `json:"pass"`
-	LockoutTime     int    `json:"lockoutTime"` // in seconds
-	LockoutLimit    int    `json:"lockoutLimit"`
-	RememberMeHours int    `json:"rememberMeHours"` // duration for "remember me" sessions
+	AuthToken   string `json:"authToken,omitempty"`
+	User        string `json:"user,omitempty"`
+	Pass        string `json:"pass,omitempty"`
+	// UserHashes holds sorted "username:original_input" strings for all
+	// configured users. It is included in the JWT change-detection hash so
+	// that adding, removing, or changing any user invalidates existing tokens.
+	UserHashes      []string `json:"userHashes,omitempty"`
+	LockoutTime     int      `json:"lockoutTime"` // in seconds
+	LockoutLimit    int      `json:"lockoutLimit"`
+	RememberMeHours int      `json:"rememberMeHours"` // duration for "remember me" sessions
 }
 
 // Common errors

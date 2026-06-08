@@ -110,30 +110,42 @@ func buildConfig(bundledFiles fs.FS, args []string, buildTime string) *server.Se
 		}
 	}
 
-	if os.Getenv("SB_USER") != "" {
-		pieces := strings.SplitN(os.Getenv("SB_USER"), ":", 2)
-		if len(pieces) != 2 {
-			log.Fatal("SB_USER must be in the format user:pass")
+	if os.Getenv("SB_USER") != "" || os.Getenv("SB_USERS") != "" {
+		users, credStrings, parseErr := server.ParseUsers()
+		if parseErr != nil {
+			log.Fatalf("Auth configuration error: %v", parseErr)
+		}
+		if len(users) == 0 {
+			log.Fatal("SB_USER / SB_USERS set but no valid user entries found")
 		}
 
-		rootSpaceConfig.Auth = &server.AuthOptions{
-			User:         pieces[0],
-			Pass:         pieces[1],
+		authOpts := &server.AuthOptions{
+			UserHashes:   credStrings,
 			AuthToken:    os.Getenv("SB_AUTH_TOKEN"),
 			LockoutLimit: 10,
 			LockoutTime:  60,
 		}
 
-		rootSpaceConfig.Authorize = func(username, password string) bool {
-			return username == rootSpaceConfig.Auth.User && password == rootSpaceConfig.Auth.Pass
+		// For single-user mode, also populate the legacy User/Pass fields so
+		// that existing AuthOptions-based tooling and tests keep working.
+		if len(users) == 1 {
+			for _, entry := range users {
+				authOpts.User = entry.Username
+				// Store the original credential string (username:input) as Pass
+				// so hashOptions produces the same value on every restart with
+				// the same credentials, enabling JWT invalidation on change.
+				authOpts.Pass = credStrings[0]
+			}
 		}
+
+		rootSpaceConfig.Auth = authOpts
+		rootSpaceConfig.Authorize = server.BuildAuthorizer(users)
 
 		if os.Getenv("SB_LOCKOUT_LIMIT") != "" {
 			rootSpaceConfig.Auth.LockoutLimit, err = strconv.Atoi(os.Getenv("SB_LOCKOUT_LIMIT"))
 			if err != nil {
 				log.Fatalf("Could not parse SB_LOCKOUT_LIMIT as number: %v", err)
 			}
-
 		}
 
 		if os.Getenv("SB_LOCKOUT_TIME") != "" {
@@ -151,8 +163,8 @@ func buildConfig(bundledFiles fs.FS, args []string, buildTime string) *server.Se
 			}
 		}
 
-		log.Printf("User authentication enabled for user \"%s\" with lockout limit %d and lockout time %ds",
-			pieces[0], rootSpaceConfig.Auth.LockoutLimit, rootSpaceConfig.Auth.LockoutTime)
+		log.Printf("[auth] Authentication enabled for %d user(s), lockout limit %d, lockout time %ds",
+			len(users), rootSpaceConfig.Auth.LockoutLimit, rootSpaceConfig.Auth.LockoutTime)
 	}
 
 	if os.Getenv("SB_NAME") != "" {
