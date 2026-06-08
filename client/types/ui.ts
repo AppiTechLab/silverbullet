@@ -18,6 +18,13 @@ export type PanelConfig = {
   script?: string;
 };
 
+export type Tab = {
+  id: string;
+  pageName: string;
+  scrollTop: number;
+  unsaved: boolean;
+};
+
 export type ActiveSection =
   | "pages"
   | "search"
@@ -34,6 +41,9 @@ export type AppViewState = {
   };
 
   activeSection: ActiveSection;
+
+  tabs: Tab[];
+  activeTabId: string | null;
 
   allPages: PageMeta[];
   allDocuments: DocumentMeta[];
@@ -90,6 +100,8 @@ export type AppViewState = {
 
 export const initialViewState: AppViewState = {
   activeSection: "pages",
+  tabs: [],
+  activeTabId: null,
   isLoading: false,
   showPageNavigator: false,
   showCommandPalette: false,
@@ -183,7 +195,13 @@ export type Action =
       progressPercentage?: number;
       progressType?: string;
     }
-  | { type: "set-active-section"; section: ActiveSection };
+  | { type: "set-active-section"; section: ActiveSection }
+  | { type: "tab-open"; pageName: string }
+  | { type: "tab-close"; tabId: string }
+  | { type: "tab-activate"; tabId: string }
+  | { type: "tab-activate-page"; tabId: string; pageName: string }
+  | { type: "tab-update-scroll"; tabId: string; scrollTop: number }
+  | { type: "tab-mark-unsaved"; tabId: string; unsaved: boolean };
 
 /**
  * Client configuration that is set at boot time, doesn't change at runtime

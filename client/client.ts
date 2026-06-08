@@ -112,6 +112,9 @@ export class Client {
   // Used to store additional command data outside the objects themselves persistent between client rusn (specifically: lastRun)
   commandAugmenter!: Augmenter;
 
+  // Called when Ctrl/Cmd+Click navigation requests a new tab instead of a new window
+  onOpenInNewTab?: (pageName: string) => void;
+
   // CodeMirror editor
   editorView!: EditorView;
   commandKeyHandlerCompartment?: Compartment;
@@ -949,6 +952,10 @@ export class Client {
     }
 
     if (newWindow) {
+      if (this.onOpenInNewTab && ref.path) {
+        this.onOpenInNewTab(getNameFromPath(ref.path));
+        return;
+      }
       console.log(
         "Navigating to new page in new window",
         `${document.baseURI}${encodePageURI(encodeRef(ref))}`,

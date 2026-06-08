@@ -8,6 +8,7 @@ import { AnythingPicker } from "./components/anything_picker.tsx";
 import { TopBar } from "./components/top_bar.tsx";
 import { SidebarRail } from "./components/sidebar_rail.tsx";
 import { SidebarNav } from "./components/sidebar_nav.tsx";
+import { TabBar } from "./components/tab_bar.tsx";
 import { Breadcrumbs } from "./components/breadcrumbs.tsx";
 import { Toolbar } from "./components/toolbar.tsx";
 import reducer from "./reducer.ts";
@@ -42,10 +43,52 @@ import {
 
 export class MainUI {
   viewState: AppViewState = initialViewState;
+  // Scroll position to restore after a tab-switch navigation completes
+  pendingScrollRestore: number | null = null;
+  // When true, the next page-loaded event opens a new tab instead of updating the current one
+  pendingNewTab = false;
 
   constructor(private client: Client) {
     // Make keyboard shortcuts work even when the editor is in read only mode or not focused
     globalThis.addEventListener("keydown", (ev) => {
+      // Tab bar keyboard shortcuts (work regardless of editor focus)
+      const withMod = ev.ctrlKey || ev.metaKey;
+      if (withMod && !ev.altKey) {
+        const { tabs, activeTabId } = this.viewState;
+        if (ev.key === "w" && tabs.length > 0 && activeTabId) {
+          ev.preventDefault();
+          const idx = tabs.findIndex((t) => t.id === activeTabId);
+          const remaining = tabs.filter((t) => t.id !== activeTabId);
+          this.viewDispatch({ type: "tab-close", tabId: activeTabId });
+          if (remaining.length > 0) {
+            const next = remaining[Math.min(idx, remaining.length - 1)];
+            this.pendingScrollRestore = next.scrollTop;
+            const ref = parseToRef(next.pageName);
+            if (ref) void client.navigate(ref);
+          }
+          return;
+        }
+        if (ev.key === "Tab" && tabs.length > 1) {
+          ev.preventDefault();
+          const idx = tabs.findIndex((t) => t.id === activeTabId);
+          const nextIdx = ev.shiftKey
+            ? (idx - 1 + tabs.length) % tabs.length
+            : (idx + 1) % tabs.length;
+          const next = tabs[nextIdx];
+          this.viewDispatch({ type: "tab-activate", tabId: next.id });
+          this.pendingScrollRestore = next.scrollTop;
+          const ref = parseToRef(next.pageName);
+          if (ref) void client.navigate(ref);
+          return;
+        }
+        if (ev.key === "t" && !ev.shiftKey) {
+          ev.preventDefault();
+          this.pendingNewTab = true;
+          client.startPageNavigate("all");
+          return;
+        }
+      }
+
       if (!client.editorView.hasFocus) {
         const target = ev.target as HTMLElement;
         if (target.className === "cm-textfield" && ev.key === "Escape") {
@@ -310,6 +353,91 @@ export class MainUI {
         }
       });
     }, [viewState.allPages]);
+
+    // Register Ctrl+Click new-tab handler once on mount
+    useEffect(() => {
+      client.onOpenInNewTab = (pageName) => {
+        dispatch({ type: "tab-open", pageName });
+        const ref = parseToRef(pageName);
+        if (ref) void client.navigate(ref);
+      };
+      return () => { client.onOpenInNewTab = undefined; };
+    }, []);
+
+    // Attach scroll tracker to CodeMirror scroller (debounced 500ms)
+    useEffect(() => {
+      const scrollEl = client.editorView.scrollDOM;
+      let timer: ReturnType<typeof setTimeout> | null = null;
+      const onScroll = () => {
+        if (timer) clearTimeout(timer);
+        timer = setTimeout(() => {
+          const { activeTabId } = this.viewState;
+          if (activeTabId) {
+            dispatch({
+              type: "tab-update-scroll",
+              tabId: activeTabId,
+              scrollTop: scrollEl.scrollTop,
+            });
+          }
+        }, 500);
+      };
+      scrollEl.addEventListener("scroll", onScroll, { passive: true });
+      return () => {
+        scrollEl.removeEventListener("scroll", onScroll);
+        if (timer) clearTimeout(timer);
+      };
+    }, []);
+
+    // Sync tabs with the currently loaded page
+    useEffect(() => {
+      if (!viewState.current) return;
+      const pageName = getNameFromPath(viewState.current.path);
+      if (!pageName) return;
+
+      // Restore scroll if a tab-switch triggered this navigation
+      if (this.pendingScrollRestore !== null) {
+        const scroll = this.pendingScrollRestore;
+        this.pendingScrollRestore = null;
+        requestAnimationFrame(() => {
+          client.editorView.scrollDOM.scrollTop = scroll;
+        });
+      }
+
+      const { tabs, activeTabId } = viewState;
+      const activeTab = tabs.find((t) => t.id === activeTabId);
+
+      // + button or Ctrl+T requested a new tab for the next navigation
+      if (this.pendingNewTab) {
+        this.pendingNewTab = false;
+        dispatch({ type: "tab-open", pageName });
+        return;
+      }
+
+      if (!activeTab) {
+        dispatch({ type: "tab-open", pageName });
+        return;
+      }
+      if (activeTab.pageName === pageName) return;
+
+      const matchingTab = tabs.find((t) => t.pageName === pageName);
+      if (matchingTab) {
+        dispatch({ type: "tab-activate", tabId: matchingTab.id });
+      } else {
+        dispatch({ type: "tab-activate-page", tabId: activeTab.id, pageName });
+      }
+    }, [viewState.current]);
+
+    // Mirror unsaved-changes state onto the active tab
+    useEffect(() => {
+      const { activeTabId } = viewState;
+      if (activeTabId) {
+        dispatch({
+          type: "tab-mark-unsaved",
+          tabId: activeTabId,
+          unsaved: viewState.unsavedChanges,
+        });
+      }
+    }, [viewState.unsavedChanges]);
 
     const actionButtons = client.config.get<ActionButton[]>(
       "actionButtons",
@@ -625,6 +753,34 @@ export class MainUI {
               }
             />
           )}
+          <TabBar
+            tabs={viewState.tabs}
+            activeTabId={viewState.activeTabId}
+            onActivate={(tabId) => {
+              const tab = viewState.tabs.find((t) => t.id === tabId);
+              if (!tab) return;
+              this.pendingScrollRestore = tab.scrollTop;
+              dispatch({ type: "tab-activate", tabId });
+              const ref = parseToRef(tab.pageName);
+              if (ref) void client.navigate(ref);
+            }}
+            onClose={(tabId) => {
+              const { tabs, activeTabId } = viewState;
+              const idx = tabs.findIndex((t) => t.id === tabId);
+              const remaining = tabs.filter((t) => t.id !== tabId);
+              dispatch({ type: "tab-close", tabId });
+              if (tabId === activeTabId && remaining.length > 0) {
+                const next = remaining[Math.min(idx, remaining.length - 1)];
+                this.pendingScrollRestore = next.scrollTop;
+                const ref = parseToRef(next.pageName);
+                if (ref) void client.navigate(ref);
+              }
+            }}
+            onNew={() => {
+              this.pendingNewTab = true;
+              client.startPageNavigate("all");
+            }}
+          />
           <Breadcrumbs
             pageName={currentPageName}
             onNavigate={(page) => {

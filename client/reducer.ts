@@ -1,4 +1,4 @@
-import type { Action, AppViewState } from "./types/ui.ts";
+import type { Action, AppViewState, Tab } from "./types/ui.ts";
 import type { PageMeta } from "../plug-api/types/index.ts";
 import {
   isMarkdownPath,
@@ -235,6 +235,60 @@ export default function reducer(
       return {
         ...state,
         activeSection: action.section,
+      };
+
+    case "tab-open": {
+      const existing = state.tabs.find((t) => t.pageName === action.pageName);
+      if (existing) {
+        return { ...state, activeTabId: existing.id };
+      }
+      const newTab: Tab = {
+        id: crypto.randomUUID(),
+        pageName: action.pageName,
+        scrollTop: 0,
+        unsaved: false,
+      };
+      return { ...state, tabs: [...state.tabs, newTab], activeTabId: newTab.id };
+    }
+
+    case "tab-close": {
+      const idx = state.tabs.findIndex((t) => t.id === action.tabId);
+      if (idx === -1) return state;
+      const newTabs = state.tabs.filter((t) => t.id !== action.tabId);
+      let newActiveId = state.activeTabId;
+      if (state.activeTabId === action.tabId) {
+        newActiveId = newTabs.length > 0
+          ? newTabs[Math.min(idx, newTabs.length - 1)].id
+          : null;
+      }
+      return { ...state, tabs: newTabs, activeTabId: newActiveId };
+    }
+
+    case "tab-activate":
+      return { ...state, activeTabId: action.tabId };
+
+    case "tab-activate-page":
+      return {
+        ...state,
+        tabs: state.tabs.map((t) =>
+          t.id === action.tabId ? { ...t, pageName: action.pageName } : t
+        ),
+      };
+
+    case "tab-update-scroll":
+      return {
+        ...state,
+        tabs: state.tabs.map((t) =>
+          t.id === action.tabId ? { ...t, scrollTop: action.scrollTop } : t
+        ),
+      };
+
+    case "tab-mark-unsaved":
+      return {
+        ...state,
+        tabs: state.tabs.map((t) =>
+          t.id === action.tabId ? { ...t, unsaved: action.unsaved } : t
+        ),
       };
   }
 }
