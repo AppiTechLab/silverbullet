@@ -2,6 +2,7 @@ package server
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"log"
@@ -34,6 +35,10 @@ type BootConfig struct {
 	// When true, the client skips service worker registration and
 	// unregisters/flushes any previously-installed service worker.
 	DisableServiceWorker bool `json:"disableServiceWorker,omitempty"`
+
+	// Authenticated user identity (empty when auth is disabled)
+	CurrentUser string `json:"currentUser,omitempty"`
+	IsAdmin     bool   `json:"isAdmin,omitempty"`
 }
 
 func Router(config *ServerConfig) chi.Router {
@@ -83,6 +88,7 @@ func Router(config *ServerConfig) chi.Router {
 	// Config endpoint
 	routes.Get("/.config", func(w http.ResponseWriter, r *http.Request) {
 		spaceConfig := spaceConfigFromContext(r.Context())
+		username := usernameFromContext(r.Context())
 		clientConfig := &BootConfig{
 			SpaceFolderPath: spaceConfig.SpaceFolderPath,
 			IndexPage:       spaceConfig.IndexPage,
@@ -91,10 +97,82 @@ func Router(config *ServerConfig) chi.Router {
 			// Client encryption is offered as an option when auth is enabled only
 			EnableClientEncryption: spaceConfig.Auth != nil,
 			DisableServiceWorker:   spaceConfig.DisableServiceWorker,
+			CurrentUser:            username,
+			IsAdmin:                spaceConfig.Permissions.IsAdmin(username),
 		}
 
 		w.Header().Set("Cache-Control", "no-cache")
 		render.JSON(w, r, clientConfig)
+	})
+
+	// Permissions API (admin-only)
+	routes.Get("/.api/permissions", func(w http.ResponseWriter, r *http.Request) {
+		spaceConfig := spaceConfigFromContext(r.Context())
+		username := usernameFromContext(r.Context())
+		if !spaceConfig.Permissions.IsAdmin(username) {
+			http.Error(w, "Forbidden", http.StatusForbidden)
+			return
+		}
+		render.JSON(w, r, spaceConfig.Permissions.GetAll())
+	})
+
+	routes.Post("/.api/permissions", func(w http.ResponseWriter, r *http.Request) {
+		spaceConfig := spaceConfigFromContext(r.Context())
+		username := usernameFromContext(r.Context())
+		if !spaceConfig.Permissions.IsAdmin(username) {
+			http.Error(w, "Forbidden", http.StatusForbidden)
+			return
+		}
+		var body struct {
+			Folder     string `json:"folder"`
+			Username   string `json:"username"`
+			Permission string `json:"permission"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+			http.Error(w, "Bad request", http.StatusBadRequest)
+			return
+		}
+		if body.Folder == "" || body.Username == "" || body.Permission == "" {
+			http.Error(w, "folder, username, and permission are required", http.StatusBadRequest)
+			return
+		}
+		if err := spaceConfig.Permissions.SetFolderPermission(body.Folder, body.Username, Permission(body.Permission)); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		render.JSON(w, r, map[string]string{"status": "ok"})
+	})
+
+	routes.Delete("/.api/permissions", func(w http.ResponseWriter, r *http.Request) {
+		spaceConfig := spaceConfigFromContext(r.Context())
+		username := usernameFromContext(r.Context())
+		if !spaceConfig.Permissions.IsAdmin(username) {
+			http.Error(w, "Forbidden", http.StatusForbidden)
+			return
+		}
+		var body struct {
+			Folder   string `json:"folder"`
+			Username string `json:"username"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+			http.Error(w, "Bad request", http.StatusBadRequest)
+			return
+		}
+		if body.Folder == "" {
+			http.Error(w, "folder is required", http.StatusBadRequest)
+			return
+		}
+		var opErr error
+		if body.Username != "" {
+			opErr = spaceConfig.Permissions.DeleteFolderUser(body.Folder, body.Username)
+		} else {
+			opErr = spaceConfig.Permissions.DeleteFolder(body.Folder)
+		}
+		if opErr != nil {
+			http.Error(w, opErr.Error(), http.StatusInternalServerError)
+			return
+		}
+		render.JSON(w, r, map[string]string{"status": "ok"})
 	})
 
 	// Shell endpoint

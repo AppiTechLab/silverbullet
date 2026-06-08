@@ -1,6 +1,7 @@
 import { useState } from "preact/hooks";
 import type { PageMeta } from "@silverbulletmd/silverbullet/type/index";
 import { emojiMap } from "../codemirror/emojiList.ts";
+import { PermissionsPanel } from "./permissions_panel.tsx";
 
 const PAGE_EMOJI_RE = /^(:[a-z0-9_+-]+:)\s*/;
 
@@ -19,6 +20,7 @@ function parsePageTitle(name: string): { icon: string | null; title: string } {
 export interface SidebarNavProps {
   activeSection: string;
   currentPage: string;
+  currentUser: string;
   pages: PageMeta[];
   tags: string[];
   onPageSelect: (page: string) => void;
@@ -54,7 +56,9 @@ function buildTagTree(tags: string[]): TagNode[] {
 }
 
 export function SidebarNav({
+  activeSection,
   currentPage,
+  currentUser,
   pages,
   tags,
   onPageSelect,
@@ -130,6 +134,14 @@ export function SidebarNav({
       </div>
     );
   };
+
+  if (activeSection === "permissions") {
+    return (
+      <div id="sb-nav-panel">
+        <PermissionsPanel currentUser={currentUser} />
+      </div>
+    );
+  }
 
   return (
     <div id="sb-nav-panel">

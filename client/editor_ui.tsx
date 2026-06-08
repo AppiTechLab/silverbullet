@@ -466,10 +466,12 @@ export class MainUI {
           activeSection={viewState.activeSection}
           onSectionChange={(section) =>
             dispatch({ type: "set-active-section", section })}
+          isAdmin={client.bootConfig.isAdmin ?? false}
         />
         <SidebarNav
           activeSection={viewState.activeSection}
           currentPage={currentPageName}
+          currentUser={client.bootConfig.currentUser ?? ""}
           pages={viewState.allPages}
           tags={allTagNames}
           onPageSelect={(name) => {

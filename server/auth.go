@@ -228,6 +228,7 @@ func authMiddleware(config *ServerConfig) func(http.Handler) http.Handler {
 						SameSite: "Lax",
 					}
 					setCookie(w, authCookieName(host), jwt, cookieOptions)
+					r = r.WithContext(contextWithUsername(r.Context(), "headless"))
 					next.ServeHTTP(w, r)
 					return
 				}
@@ -251,6 +252,7 @@ func authMiddleware(config *ServerConfig) func(http.Handler) http.Handler {
 				if after, ok := strings.CutPrefix(authHeader, "Bearer "); ok {
 					authToken := after
 					if authToken == spaceConfig.Auth.AuthToken {
+						r = r.WithContext(contextWithUsername(r.Context(), "headless"))
 						next.ServeHTTP(w, r)
 						return
 					} else {
@@ -275,13 +277,14 @@ func authMiddleware(config *ServerConfig) func(http.Handler) http.Handler {
 				return
 			}
 
-			_, ok := claims["username"].(string)
+			username, ok := claims["username"].(string)
 			if !ok {
 				log.Printf("Username mismatch in JWT on %s", path)
 				redirectToAuth(w, "/.auth", path, config.HostURLPrefix)
 				return
 			}
 
+			r = r.WithContext(contextWithUsername(r.Context(), username))
 			refreshLogin(w, r, config, host, spaceConfig)
 			next.ServeHTTP(w, r)
 		})

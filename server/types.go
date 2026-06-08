@@ -68,6 +68,10 @@ type SpaceConfig struct {
 	// Runtime API: enables Runtime API endpoints for Lua evaluation
 	EnableRuntimeAPI bool
 
+	// Folder-level access control (nil = no restrictions, everyone has full access)
+	Permissions *SpacePermissions
+	AdminUser   string
+
 	// Auth temporary objects
 	JwtIssuer    *Authenticator
 	LockoutTimer *LockoutTimer

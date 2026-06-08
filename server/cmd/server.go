@@ -141,6 +141,29 @@ func buildConfig(bundledFiles fs.FS, args []string, buildTime string) *server.Se
 		rootSpaceConfig.Auth = authOpts
 		rootSpaceConfig.Authorize = server.BuildAuthorizer(users)
 
+		// Determine the admin user: the first configured user (before alphabetic sort).
+		adminUser := ""
+		if su := os.Getenv("SB_USER"); su != "" {
+			if idx := strings.Index(su, ":"); idx > 0 {
+				adminUser = su[:idx]
+			}
+		} else if sus := os.Getenv("SB_USERS"); sus != "" {
+			first := strings.SplitN(strings.TrimSpace(sus), ",", 2)[0]
+			first = strings.TrimSpace(first)
+			if idx := strings.Index(first, ":"); idx > 0 {
+				adminUser = first[:idx]
+			}
+		}
+		if adminUser != "" {
+			perms := server.NewSpacePermissions(rootSpaceConfig.SpaceFolderPath, adminUser)
+			if loadErr := perms.Load(); loadErr != nil {
+				log.Printf("[permissions] Warning: could not load permissions file: %v", loadErr)
+			}
+			rootSpaceConfig.Permissions = perms
+			rootSpaceConfig.AdminUser = adminUser
+			log.Printf("[permissions] Folder-level permissions enabled, admin: %s", adminUser)
+		}
+
 		if os.Getenv("SB_LOCKOUT_LIMIT") != "" {
 			rootSpaceConfig.Auth.LockoutLimit, err = strconv.Atoi(os.Getenv("SB_LOCKOUT_LIMIT"))
 			if err != nil {

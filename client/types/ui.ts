@@ -24,7 +24,8 @@ export type ActiveSection =
   | "tags"
   | "tasks"
   | "templates"
-  | "attachments";
+  | "attachments"
+  | "permissions";
 
 export type AppViewState = {
   current?: {
@@ -204,6 +205,9 @@ export type BootConfig = {
 
   enableClientEncryption: boolean;
   disableServiceWorker?: boolean;
+
+  currentUser?: string;
+  isAdmin?: boolean;
 };
 
 /**

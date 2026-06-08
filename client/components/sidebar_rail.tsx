@@ -21,9 +21,10 @@ const MID_ITEMS: NavItem[] = [
 type Props = {
   activeSection: ActiveSection;
   onSectionChange: (section: ActiveSection) => void;
+  isAdmin?: boolean;
 };
 
-export function SidebarRail({ activeSection, onSectionChange }: Props) {
+export function SidebarRail({ activeSection, onSectionChange, isAdmin }: Props) {
   return (
     <div id="sb-icon-rail">
       <div className="sb-rail-logo">
@@ -56,6 +57,15 @@ export function SidebarRail({ activeSection, onSectionChange }: Props) {
 
       <div className="sb-rail-spacer" />
 
+      {isAdmin && (
+        <button
+          className={`sb-rail-btn${activeSection === "permissions" ? " active" : ""}`}
+          title="Permissions"
+          onClick={() => onSectionChange("permissions")}
+        >
+          <i className="ti ti-shield" />
+        </button>
+      )}
       <button className="sb-rail-btn" title="Settings">
         <i className="ti ti-settings" />
       </button>

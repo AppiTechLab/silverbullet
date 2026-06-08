@@ -32,6 +32,7 @@ func buildFsRoutes() http.Handler {
 
 func handleFsList(w http.ResponseWriter, r *http.Request) {
 	spaceConfig := spaceConfigFromContext(r.Context())
+	username := usernameFromContext(r.Context())
 	if r.Header.Get("X-Sync-Mode") != "" {
 		// Handle direct requests for JSON representation of file list
 		files, err := spaceConfig.SpacePrimitives.FetchFileList()
@@ -39,9 +40,20 @@ func handleFsList(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
+		// Filter: always hide _permissions.json; hide files in PermNone folders.
+		filtered := make([]FileMeta, 0, len(files))
+		for _, f := range files {
+			if f.Name == permissionsFileName {
+				continue
+			}
+			if spaceConfig.Permissions.GetFolderPermission(f.Name, username) == PermNone {
+				continue
+			}
+			filtered = append(filtered, f)
+		}
 		w.Header().Set("X-Space-Path", spaceConfig.SpaceFolderPath)
 		w.Header().Set("Cache-Control", "no-cache")
-		render.JSON(w, r, files)
+		render.JSON(w, r, filtered)
 	} else {
 		// Otherwise, redirect to the UI
 		http.Redirect(w, r, "/", http.StatusTemporaryRedirect)
@@ -52,6 +64,19 @@ func handleFsList(w http.ResponseWriter, r *http.Request) {
 func handleFsGet(w http.ResponseWriter, r *http.Request) {
 	path := DecodeURLParam(r, "*")
 	spaceConfig := spaceConfigFromContext(r.Context())
+	username := usernameFromContext(r.Context())
+
+	// Block direct access to the permissions file.
+	if path == permissionsFileName {
+		http.Error(w, "Forbidden", http.StatusForbidden)
+		return
+	}
+
+	// Check folder-level read permission.
+	if spaceConfig.Permissions.GetFolderPermission(path, username) == PermNone {
+		http.Error(w, "Forbidden", http.StatusForbidden)
+		return
+	}
 
 	// log.Printf("Got this path: %s", path)
 
@@ -92,6 +117,19 @@ func handleFsGet(w http.ResponseWriter, r *http.Request) {
 func handleFsPut(w http.ResponseWriter, r *http.Request) {
 	path := DecodeURLParam(r, "*")
 	spaceConfig := spaceConfigFromContext(r.Context())
+	username := usernameFromContext(r.Context())
+
+	// Block direct access to the permissions file.
+	if path == permissionsFileName {
+		http.Error(w, "Forbidden", http.StatusForbidden)
+		return
+	}
+
+	// Require write permission (read-only folders are not writable).
+	if spaceConfig.Permissions.GetFolderPermission(path, username) != PermWrite {
+		http.Error(w, "Forbidden", http.StatusForbidden)
+		return
+	}
 
 	// Read request body
 	body, err := io.ReadAll(r.Body)
@@ -117,6 +155,19 @@ func handleFsPut(w http.ResponseWriter, r *http.Request) {
 func handleFsDelete(w http.ResponseWriter, r *http.Request) {
 	path := DecodeURLParam(r, "*")
 	spaceConfig := spaceConfigFromContext(r.Context())
+	username := usernameFromContext(r.Context())
+
+	// Block direct access to the permissions file.
+	if path == permissionsFileName {
+		http.Error(w, "Forbidden", http.StatusForbidden)
+		return
+	}
+
+	// Require write permission.
+	if spaceConfig.Permissions.GetFolderPermission(path, username) != PermWrite {
+		http.Error(w, "Forbidden", http.StatusForbidden)
+		return
+	}
 
 	if err := spaceConfig.SpacePrimitives.DeleteFile(path); err != nil {
 		if err == ErrNotFound {

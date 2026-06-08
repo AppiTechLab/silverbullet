@@ -31,3 +31,18 @@ func spaceConfigFromContext(ctx context.Context) *SpaceConfig {
 func serverConfigFromContext(ctx context.Context) *ServerConfig {
 	return ctx.Value(serverConfigKey).(*ServerConfig)
 }
+
+type contextKey string
+
+const usernameContextKey contextKey = "username"
+
+func usernameFromContext(ctx context.Context) string {
+	if val, ok := ctx.Value(usernameContextKey).(string); ok {
+		return val
+	}
+	return ""
+}
+
+func contextWithUsername(ctx context.Context, username string) context.Context {
+	return context.WithValue(ctx, usernameContextKey, username)
+}
