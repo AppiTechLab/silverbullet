@@ -1,3 +1,5 @@
+@import url('https://rsms.me/inter/inter.css');
+
 html {
   --ui-accent-color: #464cfc;
   --ui-accent-text-color: var(--ui-accent-color);
@@ -144,12 +146,12 @@ html {
     #d0d3d6
   );
 
-  --ui-font:
-    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue",
-    Arial, "Noto Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji",
-    "Segoe UI Symbol", "Noto Color Emoji";
-  --editor-font: "iA-Mono", "Menlo";
+  --ui-font: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --editor-font: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --editor-mono-font: "JetBrains Mono", "Fira Code", "Cascadia Code", "Menlo", monospace;
   --editor-width: 800px;
+
+  font-feature-settings: "liga" 1, "calt" 1;
 
   --border-radius-md: 6px;
 

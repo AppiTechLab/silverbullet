@@ -3,7 +3,8 @@
 }
 
 #sb-main .cm-editor {
-  font-size: 18px;
+  font-size: 16px;
+  font-family: var(--editor-font);
   height: 100%;
 
   .cm-content {
@@ -73,12 +74,12 @@
     padding: 0 20px;
     max-width: var(--editor-width);
     margin: auto;
-    font-family: var(--editor-font);
+    font-family: var(--editor-mono-font);
     height: 1.5em;
     line-height: 1.5em;
 
     input {
-      font-family: var(--editor-font);
+      font-family: var(--editor-mono-font);
       font-size: 1em;
     }
   }
@@ -421,6 +422,7 @@
   // dont apply background color twice for (fenced) code blocks
   .sb-line-code .sb-code {
     background-color: transparent;
+    font-family: var(--editor-mono-font);
   }
 
   .sb-line-code-outside .sb-code-info {
@@ -443,6 +445,7 @@
 
   .sb-line-fenced-code .sb-code {
     background-color: transparent;
+    font-family: var(--editor-mono-font);
   }
 
   .sb-line-fenced-code .sb-comment {
