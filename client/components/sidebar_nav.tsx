@@ -68,7 +68,9 @@ export function SidebarNav({
 }: SidebarNavProps) {
   // Group by top-level folder; "" = root-level pages
   const collections = new Map<string, PageMeta[]>();
-  for (const page of pages) {
+  for (const page of pages.filter((p) =>
+    !(p as any)._isAspiring && !p.name.split("/").pop()!.startsWith("_")
+  )) {
     const coll = topCollection(page.name);
     if (!collections.has(coll)) collections.set(coll, []);
     collections.get(coll)!.push(page);
