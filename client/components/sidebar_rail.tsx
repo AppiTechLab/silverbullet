@@ -7,10 +7,11 @@ type NavItem = {
 };
 
 const TOP_ITEMS: NavItem[] = [
-  { id: "pages", icon: "files", title: "Pages" },
-  { id: "search", icon: "search", title: "Search" },
-  { id: "tags", icon: "tag", title: "Tags" },
-  { id: "tasks", icon: "list-check", title: "Tasks" },
+  { id: "home",   icon: "layout-sidebar", title: "Categories" },
+  { id: "pages",  icon: "files",          title: "All pages"  },
+  { id: "search", icon: "search",         title: "Search"     },
+  { id: "tags",   icon: "tag",            title: "Tags"       },
+  { id: "tasks",  icon: "list-check",     title: "Tasks"      },
 ];
 
 const MID_ITEMS: NavItem[] = [

@@ -117,7 +117,7 @@ config.define("std.widgets.toc", {
   properties = {
     enabled = {
       type = "boolean",
-      default = true,
+      default = false,
       description = "Show a table of contents at the top of pages",
       ui = { category = "Widgets", label = "Table of Contents", priority = 4 },
     },
@@ -236,24 +236,6 @@ function widgets.toc(options)
       buildTocList(headersToDisplay)
     },
     display = "block"
-  }
-end
-```
-
-### Top widget
-```space-lua
--- priority: -1
-if config.get("std.widgets.toc.enabled", true) then
-  event.listen {
-    name = "hooks:renderTopWidgets",
-    run = function(e)
-      local pageText = editor.getText()
-      local fm = index.extractFrontmatter(pageText)
-      if fm.frontmatter.pageDecoration and fm.frontmatter.pageDecoration.disableTOC then
-        return
-      end
-      return widgets.toc()
-    end
   }
 end
 ```

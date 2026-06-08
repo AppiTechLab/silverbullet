@@ -5,6 +5,14 @@ import { PermissionsPanel } from "./permissions_panel.tsx";
 
 const PAGE_EMOJI_RE = /^(:[a-z0-9_+-]+:)\s*/;
 
+const CATEGORIES: { label: string; prefix: string; icon: string }[] = [
+  { label: "Ongoing projects",    prefix: "Projects",    icon: "ti-flask"         },
+  { label: "Project acquisition", prefix: "Acquisition", icon: "ti-currency-euro" },
+  { label: "Teaching",            prefix: "Teaching",    icon: "ti-school"        },
+  { label: "Lab management",      prefix: "Lab",         icon: "ti-building"      },
+  { label: "Personal",            prefix: "Personal",    icon: "ti-user"          },
+];
+
 function parsePageTitle(name: string): { icon: string | null; title: string } {
   const base = name.slice(name.lastIndexOf("/") + 1);
   const match = base.match(PAGE_EMOJI_RE);
@@ -136,6 +144,77 @@ export function SidebarNav({
       </div>
     );
   };
+
+  if (activeSection === "home") {
+    return (
+      <div id="sb-nav-panel">
+        <div className="sb-nav-header">
+          <span className="sb-nav-workspace-name">My Space</span>
+          <button className="sb-nav-new-btn" title="New page" onClick={onNewPage}>
+            <i className="ti ti-plus" />
+          </button>
+        </div>
+
+        <div className="sb-nav-search" onClick={onSearch} role="button">
+          <i className="ti ti-search" />
+          <span className="sb-nav-search-placeholder">Search...</span>
+        </div>
+
+        <div className="sb-nav-section">
+          {CATEGORIES.map(({ label, prefix, icon }) => {
+            const catPages = pages.filter((p) =>
+              p.name.startsWith(prefix + "/") &&
+              !(p as any)._isAspiring &&
+              !p.name.split("/").pop()!.startsWith("_")
+            );
+            const isExpanded = expanded.has(prefix);
+
+            return (
+              <div key={prefix}>
+                <div
+                  className="sb-nav-item sb-nav-folder"
+                  onClick={() => toggleCollection(prefix)}
+                  role="button"
+                >
+                  <i
+                    className={`ti ti-chevron-${isExpanded ? "down" : "right"} sb-nav-chevron`}
+                    onClick={(e) => { e.stopPropagation(); toggleCollection(prefix); }}
+                  />
+                  <i className={`ti ${icon}`} />
+                  <span className="sb-nav-label">{label}</span>
+                  {catPages.length > 0 && (
+                    <span className="sb-nav-badge">{catPages.length}</span>
+                  )}
+                </div>
+
+                {isExpanded && catPages
+                  .sort((a, b) => a.name.localeCompare(b.name))
+                  .map((page) => {
+                    const { icon: pageIcon, title } = parsePageTitle(page.name);
+                    return (
+                      <div
+                        key={page.name}
+                        className={`sb-nav-item sb-nav-page${
+                          currentPage === page.name ? " active" : ""
+                        }`}
+                        style={{ paddingLeft: "22px" }}
+                        onClick={() => onPageSelect(page.name)}
+                        role="button"
+                      >
+                        {pageIcon
+                          ? <span className="sb-nav-page-emoji">{pageIcon}</span>
+                          : <i className="ti ti-file" />}
+                        <span className="sb-nav-label">{title}</span>
+                      </div>
+                    );
+                  })}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    );
+  }
 
   if (activeSection === "permissions") {
     return (

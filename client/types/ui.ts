@@ -26,6 +26,7 @@ export type Tab = {
 };
 
 export type ActiveSection =
+  | "home"
   | "pages"
   | "search"
   | "tags"
@@ -101,7 +102,7 @@ export type AppViewState = {
 };
 
 export const initialViewState: AppViewState = {
-  activeSection: "pages",
+  activeSection: "home",
   tabs: [],
   activeTabId: null,
   isLoading: false,
