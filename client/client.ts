@@ -1094,6 +1094,21 @@ export class Client {
         });
         break;
       }
+      case "sync-conflict": {
+        const conflictPage = message.path.replace(/\.conflicted:\d+(\.\w+)?$/, "");
+        this.ui.flashNotification(
+          `Sync conflict on "${conflictPage}" — a conflict copy was saved.`,
+          "warning",
+          {
+            timeout: 0,
+            actions: [{
+              name: "View conflicts",
+              run: () => this.navigate({ path: "_Conflicts" }),
+            }],
+          },
+        );
+        break;
+      }
       case "auth-error": {
         alert(message.message);
         if (
