@@ -8,6 +8,8 @@ import { AnythingPicker } from "./components/anything_picker.tsx";
 import { TopBar } from "./components/top_bar.tsx";
 import { SidebarRail } from "./components/sidebar_rail.tsx";
 import { SidebarNav } from "./components/sidebar_nav.tsx";
+import { Breadcrumbs } from "./components/breadcrumbs.tsx";
+import { Toolbar } from "./components/toolbar.tsx";
 import reducer from "./reducer.ts";
 import {
   type Action,
@@ -464,152 +466,151 @@ export class MainUI {
           onNewPage={() => void client.startCommandPalette()}
         />
         <div id="sb-editor-area">
-          <TopBar
-            pageName={
-              !viewState.current ? "" : getNameFromPath(viewState.current.path)
-            }
-            notifications={viewState.notifications}
-            onDismissNotification={(id) => {
-              dispatch({ type: "dismiss-notification", id });
-            }}
-            isOnline={viewState.isOnline}
-            unsavedChanges={viewState.unsavedChanges}
-            isLoading={viewState.isLoading}
-            progressPercentage={viewState.progressPercentage}
-            progressType={viewState.progressType}
-            onRename={async (newName) => {
-              if (client.contentManager.isDocumentEditor()) {
-                if (!newName) return;
-
-                console.log("Now renaming document to...", newName);
-                await client.clientSystem.system.invokeFunction(
-                  "index.renameDocumentCommand",
-                  [{ document: newName }],
-                );
-              } else {
-                if (!newName) {
-                  // Always move cursor to the start of the page
-                  client.editorView.dispatch({
-                    selection: { anchor: 0 },
-                  });
-                  client.focus();
-                  return;
-                }
-                console.log("Now renaming page to...", newName);
-                await client.clientSystem.system.invokeFunction(
-                  "index.renamePageCommand",
-                  [{ page: newName }],
-                );
-                client.focus();
+          {viewState.uiOptions.showTopBar && (
+            <TopBar
+              pageName={
+                !viewState.current ? "" : getNameFromPath(viewState.current.path)
               }
-            }}
-            actionButtons={[
-              // Vertical menu button
-              ...(viewState.isMobile &&
-                client.config
-                  .get<string>("mobileMenuStyle", "hamburger")
-                  .includes("hamburger")
-                ? [
-                  {
-                    icon: featherIcons.Menu,
-                    description: "Open Menu",
-                    class: "expander",
-                    callback: () => {
-                      // Make the expander button open/close the menu via toggling the CSS class "open"
-                      document
-                        .querySelector("#sb-top .sb-actions.hamburger")
-                        ?.classList.toggle("open");
+              notifications={viewState.notifications}
+              onDismissNotification={(id) => {
+                dispatch({ type: "dismiss-notification", id });
+              }}
+              isOnline={viewState.isOnline}
+              unsavedChanges={viewState.unsavedChanges}
+              isLoading={viewState.isLoading}
+              progressPercentage={viewState.progressPercentage}
+              progressType={viewState.progressType}
+              onRename={async (newName) => {
+                if (client.contentManager.isDocumentEditor()) {
+                  if (!newName) return;
+
+                  console.log("Now renaming document to...", newName);
+                  await client.clientSystem.system.invokeFunction(
+                    "index.renameDocumentCommand",
+                    [{ document: newName }],
+                  );
+                } else {
+                  if (!newName) {
+                    client.editorView.dispatch({
+                      selection: { anchor: 0 },
+                    });
+                    client.focus();
+                    return;
+                  }
+                  console.log("Now renaming page to...", newName);
+                  await client.clientSystem.system.invokeFunction(
+                    "index.renamePageCommand",
+                    [{ page: newName }],
+                  );
+                  client.focus();
+                }
+              }}
+              actionButtons={[
+                ...(viewState.isMobile &&
+                  client.config
+                    .get<string>("mobileMenuStyle", "hamburger")
+                    .includes("hamburger")
+                  ? [
+                    {
+                      icon: featherIcons.Menu,
+                      description: "Open Menu",
+                      class: "expander",
+                      callback: () => {
+                        document
+                          .querySelector("#sb-top .sb-actions.hamburger")
+                          ?.classList.toggle("open");
+                      },
                     },
-                  },
-                ]
-                : []),
-              // Custom action buttons
-              ...actionButtons
-                .filter(
-                  (
-                    // Filter out buttons without icons (invalid) and mobile buttons when not in mobile mode
-                    button,
-                  ) =>
+                  ]
+                  : []),
+                ...actionButtons
+                  .filter((button) =>
                     button.icon &&
                     (typeof button.mobile === "undefined" ||
                       button.mobile === viewState.isMobile) &&
                     (typeof button.standalone === "undefined" ||
-                      button.standalone === viewState.isStandalone),
-                )
-                // Then ensure all buttons have a priority set (by default based on array index)
-                .map((button, index) => ({
-                  ...button,
-                  priority: button.priority ?? actionButtons.length - index,
-                }))
-                .sort((a, b) => b.priority - a.priority)
-                .map((button) => {
-                  const mdiIcon = (mdi as any)[kebabToCamel(button.icon)];
-                  let featherIcon = (featherIcons as any)[
-                    kebabToCamel(button.icon)
-                  ];
-                  if (!featherIcon) {
-                    featherIcon = featherIcons.HelpCircle;
-                  }
-                  // Build description with keyboard shortcut hint
-                  let description = button.description || "";
-                  if (button.command) {
-                    const cmd = viewState.commands.get(button.command);
-                    if (cmd) {
-                      const hint = keyboardHint(cmd);
-                      if (hint) {
-                        description = description
-                          ? `${description} (${hint})`
-                          : hint;
+                      button.standalone === viewState.isStandalone)
+                  )
+                  .map((button, index) => ({
+                    ...button,
+                    priority: button.priority ?? actionButtons.length - index,
+                  }))
+                  .sort((a, b) => b.priority - a.priority)
+                  .map((button) => {
+                    const mdiIcon = (mdi as any)[kebabToCamel(button.icon)];
+                    let featherIcon = (featherIcons as any)[
+                      kebabToCamel(button.icon)
+                    ];
+                    if (!featherIcon) featherIcon = featherIcons.HelpCircle;
+                    let description = button.description || "";
+                    if (button.command) {
+                      const cmd = viewState.commands.get(button.command);
+                      if (cmd) {
+                        const hint = keyboardHint(cmd);
+                        if (hint) {
+                          description = description
+                            ? `${description} (${hint})`
+                            : hint;
+                        }
                       }
                     }
-                  }
-
-                  return {
-                    icon: mdiIcon ? mdiIcon : featherIcon,
-                    description,
-                    dropdown: button.dropdown,
-                    callback: button.command
-                      ? () => this.client.runCommandByName(button.command!)
-                      : button.run ||
-                      (() => {
-                        this.flashNotification(
-                          "actionButton did not specify a command or run() callback",
-                          "error",
-                        );
-                      }),
-                    href: "",
-                  };
-                }),
-            ]}
-            rhs={
-              !!viewState.panels.rhs.mode && (
-                <div
-                  className="panel"
-                  style={{ flex: viewState.panels.rhs.mode }}
-                />
-              )
-            }
-            lhs={
-              !!viewState.panels.lhs.mode && (
-                <div
-                  className="panel"
-                  style={{ flex: viewState.panels.lhs.mode }}
-                />
-              )
-            }
-            pageNamePrefix={
-              client.currentPageMeta()?.pageDecoration?.prefix ?? ""
-            }
-            cssClass={(client.currentPageMeta()?.pageDecoration?.cssClasses ??
-              [])
-              .join(" ")
-              .replaceAll(/[^a-zA-Z0-9-_ ]/g, "")}
-            mobileMenuStyle={viewState.isMobile
-              ? client.config.get<string>(
-                "mobileMenuStyle",
-                "hamburger",
-              )
-              : undefined}
+                    return {
+                      icon: mdiIcon ? mdiIcon : featherIcon,
+                      description,
+                      dropdown: button.dropdown,
+                      callback: button.command
+                        ? () => this.client.runCommandByName(button.command!)
+                        : button.run ||
+                        (() => {
+                          this.flashNotification(
+                            "actionButton did not specify a command or run() callback",
+                            "error",
+                          );
+                        }),
+                      href: "",
+                    };
+                  }),
+              ]}
+              rhs={
+                !!viewState.panels.rhs.mode && (
+                  <div
+                    className="panel"
+                    style={{ flex: viewState.panels.rhs.mode }}
+                  />
+                )
+              }
+              lhs={
+                !!viewState.panels.lhs.mode && (
+                  <div
+                    className="panel"
+                    style={{ flex: viewState.panels.lhs.mode }}
+                  />
+                )
+              }
+              pageNamePrefix={
+                client.currentPageMeta()?.pageDecoration?.prefix ?? ""
+              }
+              cssClass={(client.currentPageMeta()?.pageDecoration?.cssClasses ??
+                [])
+                .join(" ")
+                .replaceAll(/[^a-zA-Z0-9-_ ]/g, "")}
+              mobileMenuStyle={viewState.isMobile
+                ? client.config.get<string>("mobileMenuStyle", "hamburger")
+                : undefined}
+              readOnly={
+                viewState.uiOptions.forcedROMode || client.bootConfig.readOnly
+              }
+            />
+          )}
+          <Breadcrumbs
+            pageName={currentPageName}
+            onNavigate={(page) => {
+              const ref = parseToRef(page);
+              if (ref) void client.navigate(ref);
+            }}
+          />
+          <Toolbar
+            editorView={client.editorView}
             readOnly={
               viewState.uiOptions.forcedROMode || client.bootConfig.readOnly
             }

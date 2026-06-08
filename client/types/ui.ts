@@ -60,6 +60,7 @@ export type AppViewState = {
     markdownSyntaxRendering: boolean;
     forcedROMode: boolean;
     customStyles?: string;
+    showTopBar?: boolean;
   };
 
   // Page navigator mode
@@ -99,6 +100,7 @@ export const initialViewState: AppViewState = {
     darkMode: undefined,
     markdownSyntaxRendering: false,
     forcedROMode: false,
+    showTopBar: false,
   },
   isMobile: false,
   isStandalone: false,
