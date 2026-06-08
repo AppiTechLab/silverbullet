@@ -19,7 +19,7 @@ import {
 import * as featherIcons from "preact-feather";
 import * as mdi from "./filtered_material_icons.ts";
 import { h, render as preactRender } from "preact";
-import { useEffect, useReducer } from "preact/hooks";
+import { useEffect, useReducer, useState } from "preact/hooks";
 import { closeSearchPanel } from "@codemirror/search";
 import { runScopeHandlers } from "@codemirror/view";
 import type { Client } from "./client.ts";
@@ -295,6 +295,22 @@ export class MainUI {
       }
     }, [viewState.activeSection]);
 
+    const [allTagNames, setAllTagNames] = useState<string[]>([]);
+    useEffect(() => {
+      safeRun(async () => {
+        try {
+          const tagObjects: any[] = await client.clientSystem.system
+            .localSyscall("index.queryLuaObjects", ["tag", {}]);
+          const names = [
+            ...new Set(tagObjects.map((t) => t.name as string)),
+          ].sort();
+          setAllTagNames(names);
+        } catch {
+          // index not ready yet
+        }
+      });
+    }, [viewState.allPages]);
+
     const actionButtons = client.config.get<ActionButton[]>(
       "actionButtons",
       [],
@@ -455,8 +471,13 @@ export class MainUI {
           activeSection={viewState.activeSection}
           currentPage={currentPageName}
           pages={viewState.allPages}
+          tags={allTagNames}
           onPageSelect={(name) => {
             const ref = parseToRef(name);
+            if (ref) void client.navigate(ref);
+          }}
+          onTagSelect={(tagPage) => {
+            const ref = parseToRef(tagPage);
             if (ref) void client.navigate(ref);
           }}
           onSearch={() => {
