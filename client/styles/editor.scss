@@ -755,3 +755,9 @@
 div:not(.cm-focused).cm-fat-cursor {
   outline: none !important;
 }
+
+.sb-emoji {
+  font-style: normal;
+  cursor: default;
+  user-select: none;
+}

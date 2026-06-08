@@ -1,5 +1,20 @@
 import { useState } from "preact/hooks";
 import type { PageMeta } from "@silverbulletmd/silverbullet/type/index";
+import { emojiMap } from "../codemirror/emojiList.ts";
+
+const PAGE_EMOJI_RE = /^(:[a-z0-9_+-]+:)\s*/;
+
+function parsePageTitle(name: string): { icon: string | null; title: string } {
+  const base = name.slice(name.lastIndexOf("/") + 1);
+  const match = base.match(PAGE_EMOJI_RE);
+  if (match) {
+    const emoji = emojiMap[match[1]];
+    if (emoji) {
+      return { icon: emoji, title: base.slice(match[0].length) || base };
+    }
+  }
+  return { icon: null, title: base };
+}
 
 export interface SidebarNavProps {
   activeSection: string;
@@ -11,11 +26,6 @@ export interface SidebarNavProps {
 }
 
 type TagNode = { name: string; children: string[] };
-
-function displayName(pageName: string): string {
-  const i = pageName.lastIndexOf("/");
-  return i === -1 ? pageName : pageName.slice(i + 1);
-}
 
 function topCollection(pageName: string): string {
   const i = pageName.indexOf("/");
@@ -102,19 +112,24 @@ export function SidebarNav({
         {sortedCollections.map(([coll, collPages]) => {
           if (coll === "") {
             // Root-level pages — render flat, no folder
-            return collPages.map((page) => (
-              <div
-                key={page.name}
-                className={`sb-nav-item sb-nav-page${
-                  currentPage === page.name ? " active" : ""
-                }`}
-                onClick={() => onPageSelect(page.name)}
-                role="button"
-              >
-                <i className="ti ti-file-text" />
-                <span className="sb-nav-label">{page.name}</span>
-              </div>
-            ));
+            return collPages.map((page) => {
+              const { icon, title } = parsePageTitle(page.name);
+              return (
+                <div
+                  key={page.name}
+                  className={`sb-nav-item sb-nav-page${
+                    currentPage === page.name ? " active" : ""
+                  }`}
+                  onClick={() => onPageSelect(page.name)}
+                  role="button"
+                >
+                  {icon
+                    ? <span className="sb-nav-page-emoji">{icon}</span>
+                    : <i className="ti ti-file-text" />}
+                  <span className="sb-nav-label">{title}</span>
+                </div>
+              );
+            });
           }
 
           const isExpanded = expanded.has(coll);
@@ -137,21 +152,24 @@ export function SidebarNav({
                 )}
               </div>
               {isExpanded &&
-                collPages.map((page) => (
-                  <div
-                    key={page.name}
-                    className={`sb-nav-item sb-nav-page${
-                      currentPage === page.name ? " active" : ""
-                    }`}
-                    onClick={() => onPageSelect(page.name)}
-                    role="button"
-                  >
-                    <i className="ti ti-file-text" />
-                    <span className="sb-nav-label">
-                      {displayName(page.name)}
-                    </span>
-                  </div>
-                ))}
+                collPages.map((page) => {
+                  const { icon, title } = parsePageTitle(page.name);
+                  return (
+                    <div
+                      key={page.name}
+                      className={`sb-nav-item sb-nav-page${
+                        currentPage === page.name ? " active" : ""
+                      }`}
+                      onClick={() => onPageSelect(page.name)}
+                      role="button"
+                    >
+                      {icon
+                        ? <span className="sb-nav-page-emoji">{icon}</span>
+                        : <i className="ti ti-file-text" />}
+                      <span className="sb-nav-label">{title}</span>
+                    </div>
+                  );
+                })}
             </div>
           );
         })}

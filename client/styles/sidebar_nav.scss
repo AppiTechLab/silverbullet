@@ -107,10 +107,15 @@
       transition: background-color 0.1s;
       user-select: none;
 
-      i {
+      i, .sb-nav-page-emoji {
         font-size: 14px;
         flex-shrink: 0;
         color: var(--color-text-tertiary);
+        line-height: 1;
+      }
+
+      .sb-nav-page-emoji {
+        font-style: normal;
       }
 
       .sb-nav-label {

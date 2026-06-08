@@ -15,6 +15,7 @@ import { frontmatterPlugin } from "./frontmatter.ts";
 import { cleanEscapePlugin } from "./escapes.ts";
 import { luaDirectivePlugin } from "./lua_directive.ts";
 import { hashtagPlugin } from "./hashtag.ts";
+import { emojiPlugin } from "./emoji.ts";
 import type { ClickEvent } from "@silverbulletmd/silverbullet/type/client";
 import { attributePlugin } from "./attribute.ts";
 import { customSyntaxPlugin } from "./custom_syntax_widget.ts";
@@ -27,6 +28,7 @@ export function cleanModePlugins(client: Client) {
     luaDirectivePlugin(client),
     cleanWikiLinkPlugin(client),
     hashtagPlugin(client),
+    emojiPlugin(),
     attributePlugin(),
     frontmatterPlugin(client),
     customSyntaxPlugin(client),
