@@ -74,6 +74,8 @@ export type AppViewState = {
     showTopBar?: boolean;
   };
 
+  showToc: boolean;
+
   // Page navigator mode
   pageNavigatorMode: "page" | "meta" | "document" | "all";
 
@@ -103,6 +105,7 @@ export const initialViewState: AppViewState = {
   tabs: [],
   activeTabId: null,
   isLoading: false,
+  showToc: true,
   showPageNavigator: false,
   showCommandPalette: false,
   pageNavigatorMode: "page",
@@ -201,7 +204,8 @@ export type Action =
   | { type: "tab-activate"; tabId: string }
   | { type: "tab-activate-page"; tabId: string; pageName: string }
   | { type: "tab-update-scroll"; tabId: string; scrollTop: number }
-  | { type: "tab-mark-unsaved"; tabId: string; unsaved: boolean };
+  | { type: "tab-mark-unsaved"; tabId: string; unsaved: boolean }
+  | { type: "toggle-toc" };
 
 /**
  * Client configuration that is set at boot time, doesn't change at runtime

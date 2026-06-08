@@ -9,6 +9,8 @@ import { TopBar } from "./components/top_bar.tsx";
 import { SidebarRail } from "./components/sidebar_rail.tsx";
 import { SidebarNav } from "./components/sidebar_nav.tsx";
 import { TabBar } from "./components/tab_bar.tsx";
+import { Toc } from "./components/toc.tsx";
+import { extractHeadings, type Heading } from "./codemirror/toc.ts";
 import { Breadcrumbs } from "./components/breadcrumbs.tsx";
 import { Toolbar } from "./components/toolbar.tsx";
 import reducer from "./reducer.ts";
@@ -20,7 +22,8 @@ import {
 import * as featherIcons from "preact-feather";
 import * as mdi from "./filtered_material_icons.ts";
 import { h, render as preactRender } from "preact";
-import { useEffect, useReducer, useState } from "preact/hooks";
+import { useEffect, useReducer, useRef, useState } from "preact/hooks";
+import { EditorView } from "@codemirror/view";
 import { closeSearchPanel } from "@codemirror/search";
 import { runScopeHandlers } from "@codemirror/view";
 import type { Client } from "./client.ts";
@@ -47,6 +50,8 @@ export class MainUI {
   pendingScrollRestore: number | null = null;
   // When true, the next page-loaded event opens a new tab instead of updating the current one
   pendingNewTab = false;
+  // Called by tocPlugin (registered in editor_state.ts) whenever headings change
+  headingsChangeCallback: ((h: Heading[]) => void) | null = null;
 
   constructor(private client: Client) {
     // Make keyboard shortcuts work even when the editor is in read only mode or not focused
@@ -338,6 +343,10 @@ export class MainUI {
       }
     }, [viewState.activeSection]);
 
+    const [headings, setHeadings] = useState<Heading[]>([]);
+    const [activeHeading, setActiveHeading] = useState(-1);
+    const headingsRef = useRef<Heading[]>([]);
+
     const [allTagNames, setAllTagNames] = useState<string[]>([]);
     useEffect(() => {
       safeRun(async () => {
@@ -364,11 +373,38 @@ export class MainUI {
       return () => { client.onOpenInNewTab = undefined; };
     }, []);
 
-    // Attach scroll tracker to CodeMirror scroller (debounced 500ms)
+    // Wire up the headings callback — tocPlugin in editor_state.ts calls this.
+    // Also extract immediately in case the plugin constructor fired before this ran.
+    useEffect(() => {
+      this.headingsChangeCallback = (h) => {
+        headingsRef.current = h;
+        setHeadings(h);
+      };
+      const h = extractHeadings(client.editorView.state);
+      headingsRef.current = h;
+      setHeadings(h);
+      return () => { this.headingsChangeCallback = null; };
+    }, []);
+
+    // Attach scroll tracker: immediate for TOC active heading, debounced 500ms for tab save
     useEffect(() => {
       const scrollEl = client.editorView.scrollDOM;
       let timer: ReturnType<typeof setTimeout> | null = null;
       const onScroll = () => {
+        const scrollTop = scrollEl.scrollTop;
+        const hs = headingsRef.current;
+        let activeIdx = -1;
+        for (let i = 0; i < hs.length; i++) {
+          try {
+            const block = client.editorView.lineBlockAt(hs[i].from);
+            if (block.top <= scrollTop + 50) activeIdx = i;
+            else break;
+          } catch {
+            // position out of range during doc change
+          }
+        }
+        setActiveHeading(activeIdx);
+
         if (timer) clearTimeout(timer);
         timer = setTimeout(() => {
           const { activeTabId } = this.viewState;
@@ -595,6 +631,8 @@ export class MainUI {
           onSectionChange={(section) =>
             dispatch({ type: "set-active-section", section })}
           isAdmin={client.bootConfig.isAdmin ?? false}
+          showToc={viewState.showToc}
+          onToggleToc={() => dispatch({ type: "toggle-toc" })}
         />
         <SidebarNav
           activeSection={viewState.activeSection}
@@ -617,6 +655,7 @@ export class MainUI {
           onNewPage={() => void client.startCommandPalette()}
         />
         <div id="sb-editor-area">
+          <div id="sb-editor-column">
           {viewState.uiOptions.showTopBar && (
             <TopBar
               pageName={
@@ -817,6 +856,22 @@ export class MainUI {
             <div className="sb-bhs">
               <Panel config={viewState.panels.bhs} editor={client} />
             </div>
+          )}
+          </div>
+          {viewState.showToc && (
+            <Toc
+              headings={headings}
+              activeHeading={activeHeading}
+              onHeadingClick={(from) => {
+                client.editorView.dispatch({
+                  effects: EditorView.scrollIntoView(from, {
+                    y: "start",
+                    yMargin: 80,
+                  }),
+                });
+                client.editorView.focus();
+              }}
+            />
           )}
         </div>
       </>

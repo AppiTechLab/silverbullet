@@ -52,6 +52,7 @@ import { plugLinter } from "./lint.ts";
 import { buildExtendedMarkdownLanguage } from "../markdown_parser/parser.ts";
 import { safeRun } from "@silverbulletmd/silverbullet/lib/async";
 import { codeCopyPlugin } from "../codemirror/code_copy.ts";
+import { tocPlugin } from "./toc.ts";
 import { disableSpellcheck } from "../codemirror/spell_checking.ts";
 import type { ClickEvent } from "@silverbulletmd/silverbullet/type/client";
 
@@ -153,6 +154,7 @@ export function createEditorState(
       }),
       inlineContentPlugin(client),
       codeCopyPlugin(client),
+      tocPlugin((h) => client.ui.headingsChangeCallback?.(h)),
       highlightSpecialChars(),
       undoHistory,
       dropCursor(),

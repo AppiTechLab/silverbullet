@@ -22,9 +22,13 @@ type Props = {
   activeSection: ActiveSection;
   onSectionChange: (section: ActiveSection) => void;
   isAdmin?: boolean;
+  showToc: boolean;
+  onToggleToc: () => void;
 };
 
-export function SidebarRail({ activeSection, onSectionChange, isAdmin }: Props) {
+export function SidebarRail(
+  { activeSection, onSectionChange, isAdmin, showToc, onToggleToc }: Props,
+) {
   return (
     <div id="sb-icon-rail">
       <div className="sb-rail-logo">
@@ -66,6 +70,13 @@ export function SidebarRail({ activeSection, onSectionChange, isAdmin }: Props) 
           <i className="ti ti-shield" />
         </button>
       )}
+      <button
+        className={`sb-rail-btn${showToc ? " active" : ""}`}
+        title="Table of Contents"
+        onClick={onToggleToc}
+      >
+        <i className="ti ti-list" />
+      </button>
       <button className="sb-rail-btn" title="Settings">
         <i className="ti ti-settings" />
       </button>

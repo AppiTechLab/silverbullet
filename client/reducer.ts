@@ -290,5 +290,8 @@ export default function reducer(
           t.id === action.tabId ? { ...t, unsaved: action.unsaved } : t
         ),
       };
+
+    case "toggle-toc":
+      return { ...state, showToc: !state.showToc };
   }
 }
