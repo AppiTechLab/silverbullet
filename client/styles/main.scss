@@ -5,6 +5,7 @@
 @use "top";
 @use "xray";
 @use "components";
+@use "sidebar_rail";
 
 @font-face {
   font-family: "iA-Mono";
@@ -52,11 +53,6 @@ body {
   background-color: var(--root-background-color);
 }
 
-#sb-icon-rail {
-  width: 48px;
-  flex-shrink: 0;
-  background-color: var(--rail-background-color);
-}
 
 #sb-nav-panel {
   width: 220px;

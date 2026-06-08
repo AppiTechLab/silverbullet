@@ -1,0 +1,59 @@
+#sb-icon-rail {
+  width: 48px;
+  flex-shrink: 0;
+  background-color: var(--rail-background-color);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 8px 0 8px;
+
+  .sb-rail-logo {
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 6px;
+    font-size: 20px;
+    color: var(--rail-icon-active-color);
+  }
+
+  .sb-rail-btn {
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 6px;
+    cursor: pointer;
+    margin: 2px 0;
+    border: none;
+    background: transparent;
+    padding: 0;
+    font-size: 18px;
+    color: var(--rail-icon-color);
+    transition: background-color 0.1s, color 0.1s;
+
+    &:hover {
+      background-color: color-mix(in srgb, var(--rail-background-color), currentColor 12%);
+      color: var(--rail-icon-active-color);
+    }
+
+    &.active {
+      background-color: var(--root-background-color);
+      color: var(--rail-icon-active-color);
+    }
+  }
+
+  .sb-rail-divider {
+    width: 75%;
+    height: 0.5px;
+    background-color: var(--nav-border-color);
+    margin: 6px 0;
+    flex-shrink: 0;
+  }
+
+  .sb-rail-spacer {
+    flex: 1;
+  }
+}

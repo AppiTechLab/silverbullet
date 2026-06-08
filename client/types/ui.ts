@@ -18,11 +18,21 @@ export type PanelConfig = {
   script?: string;
 };
 
+export type ActiveSection =
+  | "pages"
+  | "search"
+  | "tags"
+  | "tasks"
+  | "templates"
+  | "attachments";
+
 export type AppViewState = {
   current?: {
     path: Path;
     meta: PageMeta | DocumentMeta;
   };
+
+  activeSection: ActiveSection;
 
   allPages: PageMeta[];
   allDocuments: DocumentMeta[];
@@ -77,6 +87,7 @@ export type AppViewState = {
 };
 
 export const initialViewState: AppViewState = {
+  activeSection: "pages",
   isLoading: false,
   showPageNavigator: false,
   showCommandPalette: false,
@@ -168,7 +179,8 @@ export type Action =
       type: "set-progress";
       progressPercentage?: number;
       progressType?: string;
-    };
+    }
+  | { type: "set-active-section"; section: ActiveSection };
 
 /**
  * Client configuration that is set at boot time, doesn't change at runtime

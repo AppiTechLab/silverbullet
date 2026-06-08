@@ -2,14 +2,11 @@ import { Confirm, Prompt } from "./components/basic_modals.tsx";
 import {
   CommandPalette,
   keyboardHint,
-} from "./components/command_palette.
-
-
-
-tsx";
+} from "./components/command_palette.tsx";
 import { FilterList } from "./components/filter.tsx";
 import { AnythingPicker } from "./components/anything_picker.tsx";
 import { TopBar } from "./components/top_bar.tsx";
+import { SidebarRail } from "./components/sidebar_rail.tsx";
 import reducer from "./reducer.ts";
 import {
   type Action,
@@ -435,7 +432,11 @@ export class MainUI {
             }}
           />
         )}
-        <div id="sb-icon-rail" />
+        <SidebarRail
+          activeSection={viewState.activeSection}
+          onSectionChange={(section) =>
+            dispatch({ type: "set-active-section", section })}
+        />
         <div id="sb-nav-panel" />
         <div id="sb-editor-area">
           <TopBar

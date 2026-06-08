@@ -231,5 +231,10 @@ export default function reducer(
         progressPercentage: action.progressPercentage,
         progressType: action.progressType,
       };
+    case "set-active-section":
+      return {
+        ...state,
+        activeSection: action.section,
+      };
   }
 }
