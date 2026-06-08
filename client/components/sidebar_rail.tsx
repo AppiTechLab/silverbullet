@@ -41,7 +41,7 @@ export function SidebarRail(
           key={item.id}
           className={`sb-rail-btn${activeSection === item.id ? " active" : ""}`}
           title={item.title}
-          onClick={() => onSectionChange(item.id)}
+          onClick={() => onSectionChange(activeSection === item.id ? "home" : item.id)}
         >
           <i className={`ti ti-${item.icon}`} />
         </button>

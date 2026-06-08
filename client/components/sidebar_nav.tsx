@@ -224,6 +224,30 @@ export function SidebarNav({
     );
   }
 
+  if (activeSection === "tags") {
+    return (
+      <div id="sb-nav-panel">
+        <div className="sb-nav-header">
+          <span className="sb-nav-workspace-name">My Space</span>
+          <button className="sb-nav-new-btn" title="New page" onClick={onNewPage}>
+            <i className="ti ti-plus" />
+          </button>
+        </div>
+
+        <div className="sb-nav-search" onClick={onSearch} role="button">
+          <i className="ti ti-search" />
+          <span className="sb-nav-search-placeholder">Search...</span>
+        </div>
+
+        <div className="sb-nav-section">
+          <div className="sb-nav-section-label">Tags</div>
+          {tagTree.map((node) => renderTagNode(node, node.name, 0))}
+        </div>
+      </div>
+    );
+  }
+
+  // activeSection === "pages"
   return (
     <div id="sb-nav-panel">
       <div className="sb-nav-header">
@@ -242,7 +266,6 @@ export function SidebarNav({
         <div className="sb-nav-section-label">Pages</div>
         {sortedCollections.map(([coll, collPages]) => {
           if (coll === "") {
-            // Root-level pages — render flat, no folder
             return collPages.map((page) => {
               const { icon, title } = parsePageTitle(page.name);
               return (
@@ -305,13 +328,6 @@ export function SidebarNav({
           );
         })}
       </div>
-
-      {tagTree.length > 0 && (
-        <div className="sb-nav-section">
-          <div className="sb-nav-section-label">Tags</div>
-          {tagTree.map((node) => renderTagNode(node, node.name, 0))}
-        </div>
-      )}
     </div>
   );
 }
