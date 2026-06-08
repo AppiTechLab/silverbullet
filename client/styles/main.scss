@@ -6,6 +6,7 @@
 @use "xray";
 @use "components";
 @use "sidebar_rail";
+@use "sidebar_nav";
 
 @font-face {
   font-family: "iA-Mono";
@@ -54,12 +55,6 @@ body {
 }
 
 
-#sb-nav-panel {
-  width: 220px;
-  flex-shrink: 0;
-  background-color: var(--nav-background-color);
-  border-right: 1px solid var(--nav-border-color);
-}
 
 #sb-editor-area {
   flex: 1;

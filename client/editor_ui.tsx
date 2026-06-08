@@ -7,6 +7,7 @@ import { FilterList } from "./components/filter.tsx";
 import { AnythingPicker } from "./components/anything_picker.tsx";
 import { TopBar } from "./components/top_bar.tsx";
 import { SidebarRail } from "./components/sidebar_rail.tsx";
+import { SidebarNav } from "./components/sidebar_nav.tsx";
 import reducer from "./reducer.ts";
 import {
   type Action,
@@ -285,10 +286,21 @@ export class MainUI {
       // Need to dispatch a resize event so that the top_bar can pick it up
       globalThis.dispatchEvent(new Event("resize"));
     }, [viewState.panels]);
+    useEffect(() => {
+      if (viewState.activeSection === "search") {
+        client.startPageNavigate("all");
+        dispatch({ type: "set-active-section", section: "pages" });
+      }
+    }, [viewState.activeSection]);
+
     const actionButtons = client.config.get<ActionButton[]>(
       "actionButtons",
       [],
     );
+
+    const currentPageName = viewState.current
+      ? getNameFromPath(viewState.current.path)
+      : "";
     return (
       <>
         {viewState.showPageNavigator && (
@@ -437,7 +449,20 @@ export class MainUI {
           onSectionChange={(section) =>
             dispatch({ type: "set-active-section", section })}
         />
-        <div id="sb-nav-panel" />
+        <SidebarNav
+          activeSection={viewState.activeSection}
+          currentPage={currentPageName}
+          pages={viewState.allPages}
+          onPageSelect={(name) => {
+            const ref = parseToRef(name);
+            if (ref) void client.navigate(ref);
+          }}
+          onSearch={() => {
+            client.startPageNavigate("all");
+            dispatch({ type: "set-active-section", section: "pages" });
+          }}
+          onNewPage={() => void client.startCommandPalette()}
+        />
         <div id="sb-editor-area">
           <TopBar
             pageName={
@@ -684,6 +709,7 @@ type ActionButton = {
   priority?: number;
   run?: () => void;
 };
+
 
 function kebabToCamel(str: string) {
   return str
