@@ -185,5 +185,117 @@
     .sb-nav-subtag {
       padding-left: 20px;
     }
+
+    .sb-nav-folder {
+      position: relative;
+    }
+
+    .sb-nav-folder-actions {
+      display: flex;
+      align-items: center;
+      gap: 2px;
+      flex-shrink: 0;
+    }
+
+    .sb-nav-badge-count {
+      /* always visible — no swap needed */
+    }
+
+    .sb-nav-add-btn {
+      width: 18px;
+      height: 18px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: none;
+      background: none;
+      border-radius: 3px;
+      padding: 0;
+      cursor: pointer;
+      color: var(--color-text-tertiary);
+      font-size: 13px;
+      opacity: 0.4;
+      transition: opacity 0.1s, background-color 0.1s, color 0.1s;
+
+      &:hover {
+        opacity: 1;
+        background-color: var(--color-background-secondary);
+        color: var(--nav-text-color);
+      }
+    }
+
+    .sb-nav-folder:hover .sb-nav-add-btn {
+      opacity: 0.8;
+    }
+
+    .sb-nav-add-menu {
+      position: absolute;
+      right: 0;
+      top: calc(100% + 2px);
+      z-index: 200;
+      background-color: var(--nav-background-color);
+      border: 1px solid var(--nav-border-color);
+      border-radius: var(--border-radius-md);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      min-width: 130px;
+      padding: 3px;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .sb-nav-add-menu-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 8px;
+      border: none;
+      background: none;
+      border-radius: var(--border-radius-md);
+      cursor: pointer;
+      font-size: 12px;
+      color: var(--nav-text-color);
+      text-align: left;
+      width: 100%;
+      transition: background-color 0.1s;
+
+      i {
+        font-size: 13px;
+        color: var(--color-text-tertiary);
+        flex-shrink: 0;
+      }
+
+      &:hover {
+        background-color: var(--color-background-secondary);
+      }
+    }
+
+    .sb-nav-inline-input-row {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      padding: 3px 6px 3px 22px;
+    }
+
+    .sb-nav-inline-icon {
+      font-size: 12px;
+      color: var(--color-text-tertiary);
+      flex-shrink: 0;
+    }
+
+    .sb-nav-inline-input {
+      flex: 1;
+      font-size: 12px;
+      font-family: var(--ui-font);
+      color: var(--nav-text-color);
+      background: var(--color-background-secondary);
+      border: 1px solid var(--nav-border-color);
+      border-radius: var(--border-radius-md);
+      padding: 3px 6px;
+      outline: none;
+
+      &:focus {
+        border-color: var(--color-accent);
+      }
+    }
   }
 }

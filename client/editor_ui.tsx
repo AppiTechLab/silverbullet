@@ -671,6 +671,15 @@ export class MainUI {
             dispatch({ type: "set-active-section", section: "pages" });
           }}
           onNewPage={() => void client.startCommandPalette()}
+          onNewPageInFolder={async (path) => {
+            const ref = parseToRef(path);
+            if (!ref || !ref.path) return;
+            const pageName = ref.path.endsWith(".md")
+              ? ref.path.slice(0, -3)
+              : ref.path;
+            await client.space.writePage(pageName, "");
+            void client.navigate(ref);
+          }}
         />
         <div id="sb-editor-area">
           <div id="sb-editor-column">

@@ -1,4 +1,4 @@
-import { useState } from "preact/hooks";
+import { useState, useRef } from "preact/hooks";
 import type { PageMeta } from "@silverbulletmd/silverbullet/type/index";
 import { emojiMap } from "../codemirror/emojiList.ts";
 import { PermissionsPanel } from "./permissions_panel.tsx";
@@ -36,6 +36,7 @@ export interface SidebarNavProps {
   onTagSelect: (tagPage: string) => void;
   onSearch: () => void;
   onNewPage: () => void;
+  onNewPageInFolder: (path: string) => void;
 }
 
 type TagNode = { name: string; children: TagNode[] };
@@ -74,6 +75,7 @@ export function SidebarNav({
   onTagSelect,
   onSearch,
   onNewPage,
+  onNewPageInFolder,
 }: SidebarNavProps) {
   // Group by top-level folder; "" = root-level pages
   const collections = new Map<string, PageMeta[]>();
@@ -95,6 +97,19 @@ export function SidebarNav({
 
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [expandedTags, setExpandedTags] = useState<Set<string>>(new Set());
+
+  type NewItemState = {
+    parentFolder: string;
+    type: "note" | "folder";
+  } | null;
+
+  const [newItemMenu, setNewItemMenu] = useState<string | null>(null);
+  const [newItem, setNewItem] = useState<NewItemState>(null);
+
+  const cancelNew = () => {
+    setNewItemMenu(null);
+    setNewItem(null);
+  };
 
   const toggle = (setter: (fn: (prev: Set<string>) => Set<string>) => void, name: string) => {
     setter((prev) => {
@@ -206,26 +221,66 @@ export function SidebarNav({
           })}
 
           {Array.from(subFolders.entries()).map(([sub, subPages]) => {
-            const isExpanded = expanded.has(`${folderPrefix}/${sub}`);
+            const folderPath = `${folderPrefix}/${sub}`;
+            const menuOpen = newItemMenu === folderPath;
+            const inputActive = newItem?.parentFolder === folderPath;
+
             return (
               <div key={sub}>
-                <div
-                  className="sb-nav-item sb-nav-folder"
-                  onClick={() => toggleCollection(`${folderPrefix}/${sub}`)}
-                  role="button"
-                >
-                  <i
-                    className={`ti ti-chevron-${isExpanded ? "down" : "right"} sb-nav-chevron`}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      toggleCollection(`${folderPrefix}/${sub}`);
-                    }}
-                  />
+                <div className="sb-nav-item sb-nav-folder" role="presentation">
                   <i className="ti ti-folder" />
                   <span className="sb-nav-label">{sub}</span>
-                  <span className="sb-nav-badge">{subPages.length}</span>
+
+                  <span className="sb-nav-folder-actions">
+                    <span className="sb-nav-badge sb-nav-badge-count">{subPages.length}</span>
+                    <button
+                      className="sb-nav-add-btn"
+                      title="New note or folder"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setNewItem(null);
+                        setNewItemMenu(menuOpen ? null : folderPath);
+                      }}
+                    >
+                      <i className="ti ti-plus" />
+                    </button>
+
+                    {menuOpen && (
+                      <div className="sb-nav-add-menu" onClick={(e) => e.stopPropagation()}>
+                        <button
+                          className="sb-nav-add-menu-item"
+                          onClick={() => { setNewItemMenu(null); setNewItem({ parentFolder: folderPath, type: "note" }); }}
+                        >
+                          <i className="ti ti-file-plus" /> New note
+                        </button>
+                        <button
+                          className="sb-nav-add-menu-item"
+                          onClick={() => { setNewItemMenu(null); setNewItem({ parentFolder: folderPath, type: "folder" }); }}
+                        >
+                          <i className="ti ti-folder-plus" /> New folder
+                        </button>
+                      </div>
+                    )}
+                  </span>
                 </div>
-                {isExpanded && subPages.map((page) => {
+
+                {inputActive && (
+                  <InlineInput
+                    placeholder={newItem!.type === "note" ? `Note name…` : `Folder name…`}
+                    onCommit={(value) => {
+                      const name = value.trim();
+                      if (!name) { cancelNew(); return; }
+                      const path = newItem!.type === "note"
+                        ? `${folderPath}/${name}`
+                        : `${folderPath}/${name}/Untitled`;
+                      cancelNew();
+                      onNewPageInFolder(path);
+                    }}
+                    onCancel={cancelNew}
+                  />
+                )}
+
+                {subPages.map((page) => {
                   const { icon: pageIcon, title } = parsePageTitle(page.name);
                   return (
                     <div
@@ -373,45 +428,209 @@ export function SidebarNav({
           }
 
           const isExpanded = expanded.has(coll);
+          const menuOpen = newItemMenu === coll;
+          const inputActive = newItem?.parentFolder === coll;
+
+          // Split into direct pages and subfolder groups
+          const collSubFolders = new Map<string, PageMeta[]>();
+          const collRootPages: PageMeta[] = [];
+          for (const page of collPages) {
+            const rel = page.name.slice(coll.length + 1);
+            const slash = rel.indexOf("/");
+            if (slash > 0) {
+              const sub = rel.slice(0, slash);
+              if (!collSubFolders.has(sub)) collSubFolders.set(sub, []);
+              collSubFolders.get(sub)!.push(page);
+            } else {
+              collRootPages.push(page);
+            }
+          }
+
           return (
             <div key={coll}>
               <div
-                className="sb-nav-item sb-nav-collection"
-                onClick={() => toggleCollection(coll)}
+                className="sb-nav-item sb-nav-collection sb-nav-folder"
+                onClick={() => { cancelNew(); toggleCollection(coll); }}
                 role="button"
               >
                 <i
                   className={`ti ti-chevron-${isExpanded ? "down" : "right"} sb-nav-chevron`}
+                  onClick={(e) => { e.stopPropagation(); cancelNew(); toggleCollection(coll); }}
                 />
                 <i className="ti ti-folder" />
                 <span className="sb-nav-label">{coll}</span>
-                {!isExpanded && (
-                  <span className="sb-nav-badge">{collPages.length}</span>
-                )}
-              </div>
-              {isExpanded &&
-                collPages.map((page) => {
-                  const { icon, title } = parsePageTitle(page.name);
-                  return (
-                    <div
-                      key={page.name}
-                      className={`sb-nav-item sb-nav-page${
-                        currentPage === page.name ? " active" : ""
-                      }`}
-                      onClick={() => onPageSelect(page.name)}
-                      role="button"
-                    >
-                      {icon
-                        ? <span className="sb-nav-page-emoji">{icon}</span>
-                        : <i className="ti ti-file-text" />}
-                      <span className="sb-nav-label">{title}</span>
+                <span className="sb-nav-folder-actions">
+                  <span className="sb-nav-badge sb-nav-badge-count">{collPages.length}</span>
+                  <button
+                    className="sb-nav-add-btn"
+                    title="New note or folder"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setNewItem(null);
+                      setNewItemMenu(menuOpen ? null : coll);
+                    }}
+                  >
+                    <i className="ti ti-plus" />
+                  </button>
+                  {menuOpen && (
+                    <div className="sb-nav-add-menu" onClick={(e) => e.stopPropagation()}>
+                      <button
+                        className="sb-nav-add-menu-item"
+                        onClick={() => { setNewItemMenu(null); setNewItem({ parentFolder: coll, type: "note" }); }}
+                      >
+                        <i className="ti ti-file-plus" /> New note
+                      </button>
+                      <button
+                        className="sb-nav-add-menu-item"
+                        onClick={() => { setNewItemMenu(null); setNewItem({ parentFolder: coll, type: "folder" }); }}
+                      >
+                        <i className="ti ti-folder-plus" /> New folder
+                      </button>
                     </div>
-                  );
-                })}
+                  )}
+                </span>
+              </div>
+              {inputActive && (
+                <InlineInput
+                  placeholder={newItem!.type === "note" ? `Note name…` : `Folder name…`}
+                  onCommit={(value) => {
+                    const name = value.trim();
+                    if (!name) { cancelNew(); return; }
+                    const path = newItem!.type === "note"
+                      ? `${coll}/${name}`
+                      : `${coll}/${name}/Untitled`;
+                    cancelNew();
+                    onNewPageInFolder(path);
+                  }}
+                  onCancel={cancelNew}
+                />
+              )}
+              {isExpanded && (
+                <>
+                  {collRootPages.map((page) => {
+                    const { icon, title } = parsePageTitle(page.name);
+                    return (
+                      <div
+                        key={page.name}
+                        className={`sb-nav-item sb-nav-page${currentPage === page.name ? " active" : ""}`}
+                        onClick={() => onPageSelect(page.name)}
+                        role="button"
+                      >
+                        {icon ? <span className="sb-nav-page-emoji">{icon}</span> : <i className="ti ti-file-text" />}
+                        <span className="sb-nav-label">{title}</span>
+                      </div>
+                    );
+                  })}
+                  {Array.from(collSubFolders.entries()).map(([sub, subPages]) => {
+                    const subPath = `${coll}/${sub}`;
+                    const subMenuOpen = newItemMenu === subPath;
+                    const subInputActive = newItem?.parentFolder === subPath;
+                    return (
+                      <div key={sub}>
+                        <div className="sb-nav-item sb-nav-folder" role="presentation">
+                          <i className="ti ti-folder" />
+                          <span className="sb-nav-label">{sub}</span>
+                          <span className="sb-nav-folder-actions">
+                            <span className="sb-nav-badge sb-nav-badge-count">{subPages.length}</span>
+                            <button
+                              className="sb-nav-add-btn"
+                              title="New note or folder"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setNewItem(null);
+                                setNewItemMenu(subMenuOpen ? null : subPath);
+                              }}
+                            >
+                              <i className="ti ti-plus" />
+                            </button>
+                            {subMenuOpen && (
+                              <div className="sb-nav-add-menu" onClick={(e) => e.stopPropagation()}>
+                                <button
+                                  className="sb-nav-add-menu-item"
+                                  onClick={() => { setNewItemMenu(null); setNewItem({ parentFolder: subPath, type: "note" }); }}
+                                >
+                                  <i className="ti ti-file-plus" /> New note
+                                </button>
+                                <button
+                                  className="sb-nav-add-menu-item"
+                                  onClick={() => { setNewItemMenu(null); setNewItem({ parentFolder: subPath, type: "folder" }); }}
+                                >
+                                  <i className="ti ti-folder-plus" /> New folder
+                                </button>
+                              </div>
+                            )}
+                          </span>
+                        </div>
+                        {subInputActive && (
+                          <InlineInput
+                            placeholder={newItem!.type === "note" ? `Note name…` : `Folder name…`}
+                            onCommit={(value) => {
+                              const name = value.trim();
+                              if (!name) { cancelNew(); return; }
+                              const path = newItem!.type === "note"
+                                ? `${subPath}/${name}`
+                                : `${subPath}/${name}/Untitled`;
+                              cancelNew();
+                              onNewPageInFolder(path);
+                            }}
+                            onCancel={cancelNew}
+                          />
+                        )}
+                        {subPages.map((page) => {
+                          const { icon, title } = parsePageTitle(page.name);
+                          return (
+                            <div
+                              key={page.name}
+                              className={`sb-nav-item sb-nav-page${currentPage === page.name ? " active" : ""}`}
+                              style={{ paddingLeft: "28px" }}
+                              onClick={() => onPageSelect(page.name)}
+                              role="button"
+                            >
+                              {icon ? <span className="sb-nav-page-emoji">{icon}</span> : <i className="ti ti-file-text" />}
+                              <span className="sb-nav-label">{title}</span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    );
+                  })}
+                </>
+              )}
             </div>
           );
         })}
       </div>
+    </div>
+  );
+}
+
+function InlineInput({
+  placeholder,
+  onCommit,
+  onCancel,
+}: {
+  placeholder: string;
+  onCommit: (value: string) => void;
+  onCancel: () => void;
+}) {
+  const [value, setValue] = useState("");
+  const ref = useRef<HTMLInputElement>(null);
+  return (
+    <div className="sb-nav-inline-input-row">
+      <i className="ti ti-corner-down-right sb-nav-inline-icon" />
+      <input
+        ref={ref}
+        autoFocus
+        className="sb-nav-inline-input"
+        placeholder={placeholder}
+        value={value}
+        onInput={(e) => setValue((e.target as HTMLInputElement).value)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") { e.preventDefault(); onCommit(value); }
+          if (e.key === "Escape") { e.preventDefault(); onCancel(); }
+        }}
+        onBlur={() => setTimeout(onCancel, 150)}
+      />
     </div>
   );
 }
