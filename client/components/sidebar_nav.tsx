@@ -2,26 +2,27 @@ import { useState } from "preact/hooks";
 import type { PageMeta } from "@silverbulletmd/silverbullet/type/index";
 import { emojiMap } from "../codemirror/emojiList.ts";
 import { PermissionsPanel } from "./permissions_panel.tsx";
+import { parseFolderMeta } from "../lib/folder_icon.ts";
 
 const PAGE_EMOJI_RE = /^(:[a-z0-9_+-]+:)\s*/;
-
-const CATEGORIES: { label: string; prefix: string; icon: string }[] = [
-  { label: "Ongoing projects",    prefix: "Projects",    icon: "ti-flask"         },
-  { label: "Project acquisition", prefix: "Acquisition", icon: "ti-currency-euro" },
-  { label: "Teaching",            prefix: "Teaching",    icon: "ti-school"        },
-  { label: "Lab management",      prefix: "Lab",         icon: "ti-building"      },
-  { label: "Personal",            prefix: "Personal",    icon: "ti-user"          },
-];
+const RAW_EMOJI_RE = /^(\p{Extended_Pictographic})\s*/u;
 
 function parsePageTitle(name: string): { icon: string | null; title: string } {
   const base = name.slice(name.lastIndexOf("/") + 1);
-  const match = base.match(PAGE_EMOJI_RE);
-  if (match) {
-    const emoji = emojiMap[match[1]];
+
+  const shortcodeMatch = base.match(PAGE_EMOJI_RE);
+  if (shortcodeMatch) {
+    const emoji = emojiMap[shortcodeMatch[1]];
     if (emoji) {
-      return { icon: emoji, title: base.slice(match[0].length) || base };
+      return { icon: emoji, title: base.slice(shortcodeMatch[0].length) || base };
     }
   }
+
+  const rawMatch = base.match(RAW_EMOJI_RE);
+  if (rawMatch) {
+    return { icon: rawMatch[1], title: base.slice(rawMatch[0].length).trim() || base };
+  }
+
   return { icon: null, title: base };
 }
 
@@ -109,7 +110,6 @@ export function SidebarNav({
 
   const tagTree = buildTagTree(tags);
 
-  // Renders a tag node at any depth; `path` is the full slash-joined key for expand state.
   const renderTagNode = (node: TagNode, path: string, depth: number): any => {
     const hasChildren = node.children.length > 0;
     const isExpanded = expandedTags.has(path);
@@ -124,9 +124,7 @@ export function SidebarNav({
           {hasChildren
             ? (
               <i
-                className={`ti ti-chevron-${
-                  isExpanded ? "down" : "right"
-                } sb-nav-chevron`}
+                className={`ti ti-chevron-${isExpanded ? "down" : "right"} sb-nav-chevron`}
                 onClick={(e) => { e.stopPropagation(); toggleTag(path); }}
               />
             )
@@ -145,11 +143,40 @@ export function SidebarNav({
     );
   };
 
-  if (activeSection === "home") {
+  if (activeSection.startsWith("category:")) {
+    const folderPrefix = activeSection.slice("category:".length);
+    const { label, icon } = parseFolderMeta(folderPrefix);
+
+    const folderPages = pages
+      .filter((p) =>
+        p.name.startsWith(folderPrefix + "/") &&
+        !(p as any)._isAspiring &&
+        !p.name.split("/").pop()!.startsWith("_")
+      )
+      .sort((a, b) => a.name.localeCompare(b.name));
+
+    const subFolders = new Map<string, typeof pages>();
+    const rootPages: typeof pages = [];
+
+    for (const page of folderPages) {
+      const relativeName = page.name.slice(folderPrefix.length + 1);
+      const slash = relativeName.indexOf("/");
+      if (slash > 0) {
+        const sub = relativeName.slice(0, slash);
+        if (!subFolders.has(sub)) subFolders.set(sub, []);
+        subFolders.get(sub)!.push(page);
+      } else {
+        rootPages.push(page);
+      }
+    }
+
     return (
       <div id="sb-nav-panel">
         <div className="sb-nav-header">
-          <span className="sb-nav-workspace-name">My Space</span>
+          <span className="sb-nav-workspace-name">
+            {icon && <span style={{ marginRight: "6px" }}>{icon}</span>}
+            {label}
+          </span>
           <button className="sb-nav-new-btn" title="New page" onClick={onNewPage}>
             <i className="ti ti-plus" />
           </button>
@@ -161,53 +188,60 @@ export function SidebarNav({
         </div>
 
         <div className="sb-nav-section">
-          {CATEGORIES.map(({ label, prefix, icon }) => {
-            const catPages = pages.filter((p) =>
-              p.name.startsWith(prefix + "/") &&
-              !(p as any)._isAspiring &&
-              !p.name.split("/").pop()!.startsWith("_")
-            );
-            const isExpanded = expanded.has(prefix);
-
+          {rootPages.map((page) => {
+            const { icon: pageIcon, title } = parsePageTitle(page.name);
             return (
-              <div key={prefix}>
+              <div
+                key={page.name}
+                className={`sb-nav-item sb-nav-page${currentPage === page.name ? " active" : ""}`}
+                onClick={() => onPageSelect(page.name)}
+                role="button"
+              >
+                {pageIcon
+                  ? <span className="sb-nav-page-emoji">{pageIcon}</span>
+                  : <i className="ti ti-file" />}
+                <span className="sb-nav-label">{title}</span>
+              </div>
+            );
+          })}
+
+          {Array.from(subFolders.entries()).map(([sub, subPages]) => {
+            const isExpanded = expanded.has(`${folderPrefix}/${sub}`);
+            return (
+              <div key={sub}>
                 <div
                   className="sb-nav-item sb-nav-folder"
-                  onClick={() => toggleCollection(prefix)}
+                  onClick={() => toggleCollection(`${folderPrefix}/${sub}`)}
                   role="button"
                 >
                   <i
                     className={`ti ti-chevron-${isExpanded ? "down" : "right"} sb-nav-chevron`}
-                    onClick={(e) => { e.stopPropagation(); toggleCollection(prefix); }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      toggleCollection(`${folderPrefix}/${sub}`);
+                    }}
                   />
-                  <i className={`ti ${icon}`} />
-                  <span className="sb-nav-label">{label}</span>
-                  {catPages.length > 0 && (
-                    <span className="sb-nav-badge">{catPages.length}</span>
-                  )}
+                  <i className="ti ti-folder" />
+                  <span className="sb-nav-label">{sub}</span>
+                  <span className="sb-nav-badge">{subPages.length}</span>
                 </div>
-
-                {isExpanded && catPages
-                  .sort((a, b) => a.name.localeCompare(b.name))
-                  .map((page) => {
-                    const { icon: pageIcon, title } = parsePageTitle(page.name);
-                    return (
-                      <div
-                        key={page.name}
-                        className={`sb-nav-item sb-nav-page${
-                          currentPage === page.name ? " active" : ""
-                        }`}
-                        style={{ paddingLeft: "22px" }}
-                        onClick={() => onPageSelect(page.name)}
-                        role="button"
-                      >
-                        {pageIcon
-                          ? <span className="sb-nav-page-emoji">{pageIcon}</span>
-                          : <i className="ti ti-file" />}
-                        <span className="sb-nav-label">{title}</span>
-                      </div>
-                    );
-                  })}
+                {isExpanded && subPages.map((page) => {
+                  const { icon: pageIcon, title } = parsePageTitle(page.name);
+                  return (
+                    <div
+                      key={page.name}
+                      className={`sb-nav-item sb-nav-page${currentPage === page.name ? " active" : ""}`}
+                      style={{ paddingLeft: "28px" }}
+                      onClick={() => onPageSelect(page.name)}
+                      role="button"
+                    >
+                      {pageIcon
+                        ? <span className="sb-nav-page-emoji">{pageIcon}</span>
+                        : <i className="ti ti-file" />}
+                      <span className="sb-nav-label">{title}</span>
+                    </div>
+                  );
+                })}
               </div>
             );
           })}
@@ -220,6 +254,58 @@ export function SidebarNav({
     return (
       <div id="sb-nav-panel">
         <PermissionsPanel currentUser={currentUser} />
+      </div>
+    );
+  }
+
+  if (activeSection === "recent") {
+    const recentPages = pages
+      .filter((p) =>
+        !(p as any)._isAspiring &&
+        !p.name.split("/").pop()!.startsWith("_")
+      )
+      .sort((a, b) => (b.lastModified ?? 0) - (a.lastModified ?? 0));
+
+    return (
+      <div id="sb-nav-panel">
+        <div className="sb-nav-header">
+          <span className="sb-nav-workspace-name">Recent</span>
+          <button className="sb-nav-new-btn" title="New page" onClick={onNewPage}>
+            <i className="ti ti-plus" />
+          </button>
+        </div>
+
+        <div className="sb-nav-search" onClick={onSearch} role="button">
+          <i className="ti ti-search" />
+          <span className="sb-nav-search-placeholder">Search...</span>
+        </div>
+
+        <div className="sb-nav-section">
+          {recentPages.map((page) => {
+            const { icon: pageIcon, title } = parsePageTitle(page.name);
+            const date = page.lastModified
+              ? new Date(page.lastModified).toLocaleDateString(undefined, {
+                  month: "short",
+                  day: "numeric",
+                  year: "numeric",
+                })
+              : null;
+            return (
+              <div
+                key={page.name}
+                className={`sb-nav-item sb-nav-page${currentPage === page.name ? " active" : ""}`}
+                onClick={() => onPageSelect(page.name)}
+                role="button"
+              >
+                {pageIcon
+                  ? <span className="sb-nav-page-emoji">{pageIcon}</span>
+                  : <i className="ti ti-file-text" />}
+                <span className="sb-nav-label">{title}</span>
+                {date && <span className="sb-nav-date">{date}</span>}
+              </div>
+            );
+          })}
+        </div>
       </div>
     );
   }
@@ -247,7 +333,7 @@ export function SidebarNav({
     );
   }
 
-  // activeSection === "pages"
+  // activeSection === "pages" (or any unrecognised fallback)
   return (
     <div id="sb-nav-panel">
       <div className="sb-nav-header">
@@ -295,9 +381,7 @@ export function SidebarNav({
                 role="button"
               >
                 <i
-                  className={`ti ti-chevron-${
-                    isExpanded ? "down" : "right"
-                  } sb-nav-chevron`}
+                  className={`ti ti-chevron-${isExpanded ? "down" : "right"} sb-nav-chevron`}
                 />
                 <i className="ti ti-folder" />
                 <span className="sb-nav-label">{coll}</span>

@@ -1,4 +1,5 @@
 import type { ActiveSection } from "../types/ui.ts";
+import type { FolderMeta } from "../lib/folder_icon.ts";
 
 type NavItem = {
   id: ActiveSection;
@@ -7,28 +8,29 @@ type NavItem = {
 };
 
 const TOP_ITEMS: NavItem[] = [
-  { id: "home",   icon: "layout-sidebar", title: "Categories" },
-  { id: "pages",  icon: "files",          title: "All pages"  },
-  { id: "search", icon: "search",         title: "Search"     },
-  { id: "tags",   icon: "tag",            title: "Tags"       },
-  { id: "tasks",  icon: "list-check",     title: "Tasks"      },
+  { id: "recent", icon: "history",    title: "Recent"    },
+  { id: "pages",  icon: "files",      title: "All pages" },
+  { id: "search", icon: "search",     title: "Search"    },
+  { id: "tags",   icon: "tag",        title: "Tags"      },
+  { id: "tasks",  icon: "list-check", title: "Tasks"     },
 ];
 
 const MID_ITEMS: NavItem[] = [
-  { id: "templates", icon: "template", title: "Templates" },
+  { id: "templates",   icon: "template",  title: "Templates"   },
   { id: "attachments", icon: "paperclip", title: "Attachments" },
 ];
 
 type Props = {
   activeSection: ActiveSection;
   onSectionChange: (section: ActiveSection) => void;
+  categories: FolderMeta[];
   isAdmin?: boolean;
   showToc: boolean;
   onToggleToc: () => void;
 };
 
 export function SidebarRail(
-  { activeSection, onSectionChange, isAdmin, showToc, onToggleToc }: Props,
+  { activeSection, onSectionChange, categories, isAdmin, showToc, onToggleToc }: Props,
 ) {
   return (
     <div id="sb-icon-rail">
@@ -36,12 +38,30 @@ export function SidebarRail(
         <i className="ti ti-bolt" />
       </div>
 
+      {categories.map((cat) => {
+        const sectionId: ActiveSection = `category:${cat.prefix}`;
+        return (
+          <button
+            key={cat.prefix}
+            className={`sb-rail-btn${activeSection === sectionId ? " active" : ""}`}
+            title={cat.label}
+            onClick={() => onSectionChange(sectionId)}
+          >
+            {cat.icon
+              ? <span className="sb-rail-emoji">{cat.icon}</span>
+              : <i className="ti ti-folder" />}
+          </button>
+        );
+      })}
+
+      <div className="sb-rail-divider" />
+
       {TOP_ITEMS.map((item) => (
         <button
           key={item.id}
           className={`sb-rail-btn${activeSection === item.id ? " active" : ""}`}
           title={item.title}
-          onClick={() => onSectionChange(activeSection === item.id ? "home" : item.id)}
+          onClick={() => onSectionChange(activeSection === item.id ? "pages" : item.id)}
         >
           <i className={`ti ti-${item.icon}`} />
         </button>

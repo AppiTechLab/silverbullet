@@ -13,6 +13,7 @@ import { Toc } from "./components/toc.tsx";
 import { extractHeadings, type Heading } from "./codemirror/toc.ts";
 import { Breadcrumbs } from "./components/breadcrumbs.tsx";
 import { Toolbar } from "./components/toolbar.tsx";
+import { topLevelFolders, parseFolderMeta, type FolderMeta } from "./lib/folder_icon.ts";
 import reducer from "./reducer.ts";
 import {
   type Action,
@@ -343,6 +344,22 @@ export class MainUI {
       }
     }, [viewState.activeSection]);
 
+    const categories: FolderMeta[] = topLevelFolders(viewState.allPages)
+      .map(parseFolderMeta)
+      .filter((c) => c.icon !== "");
+
+    useEffect(() => {
+      if (
+        categories.length > 0 &&
+        !viewState.activeSection.startsWith("category:")
+      ) {
+        dispatch({
+          type: "set-active-section",
+          section: `category:${categories[0].prefix}`,
+        });
+      }
+    }, [categories.length]);
+
     const [headings, setHeadings] = useState<Heading[]>([]);
     const [activeHeading, setActiveHeading] = useState(-1);
     const headingsRef = useRef<Heading[]>([]);
@@ -630,6 +647,7 @@ export class MainUI {
           activeSection={viewState.activeSection}
           onSectionChange={(section) =>
             dispatch({ type: "set-active-section", section })}
+          categories={categories}
           isAdmin={client.bootConfig.isAdmin ?? false}
           showToc={viewState.showToc}
           onToggleToc={() => dispatch({ type: "toggle-toc" })}

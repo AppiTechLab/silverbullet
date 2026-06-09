@@ -125,6 +125,13 @@
         text-overflow: ellipsis;
       }
 
+      .sb-nav-date {
+        font-size: 11px;
+        color: var(--color-text-tertiary);
+        flex-shrink: 0;
+        margin-left: 4px;
+      }
+
       .sb-nav-chevron {
         color: var(--color-text-tertiary);
         font-size: 12px;

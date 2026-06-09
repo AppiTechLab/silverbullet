@@ -56,4 +56,12 @@
   .sb-rail-spacer {
     flex: 1;
   }
+
+  .sb-rail-emoji {
+    font-size: 18px;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
 }

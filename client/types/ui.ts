@@ -26,8 +26,9 @@ export type Tab = {
 };
 
 export type ActiveSection =
-  | "home"
+  | `category:${string}`
   | "pages"
+  | "recent"
   | "search"
   | "tags"
   | "tasks"
@@ -102,7 +103,7 @@ export type AppViewState = {
 };
 
 export const initialViewState: AppViewState = {
-  activeSection: "home",
+  activeSection: "pages",
   tabs: [],
   activeTabId: null,
   isLoading: false,
