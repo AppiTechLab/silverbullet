@@ -398,6 +398,7 @@
   thead tr td {
     // Primarily to make the column headers look reasonable with the button bar that may be put on top
     padding: 11px 8px;
+    border-bottom: 2px solid var(--editor-border-color, #ccc);
   }
 
   th,

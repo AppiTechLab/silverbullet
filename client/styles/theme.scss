@@ -108,8 +108,8 @@ html {
   --editor-command-button-border-color: gray;
   --editor-line-meta-color: var(--meta-subtle-color);
   --editor-meta-color: var(--meta-color);
-  --editor-table-head-background-color: #333;
-  --editor-table-head-color: #eee;
+  --editor-table-head-background-color: transparent;
+  --editor-table-head-color: var(--editor-fg);
   --editor-table-even-background-color: #f3f3f3;
   --editor-blockquote-background-color: var(--subtle-background-color);
   --editor-blockquote-color: var(--subtle-color);
@@ -317,8 +317,8 @@ html[data-theme="dark"] {
   --editor-command-button-border-color: #666;
   --editor-line-meta-color: var(--meta-subtle-color);
   --editor-meta-color: var(--meta-color);
-  --editor-table-head-background-color: rgba(72, 72, 72, 0.4);
-  --editor-table-head-color: #eee;
+  --editor-table-head-background-color: transparent;
+  --editor-table-head-color: var(--editor-fg);
   --editor-table-even-background-color: rgba(72, 72, 72, 0.3);
   --editor-blockquote-background-color: var(--subtle-background-color);
   --editor-blockquote-color: var(--subtle-color);
