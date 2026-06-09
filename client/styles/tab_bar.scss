@@ -56,6 +56,25 @@
       min-width: 0;
     }
 
+    .sb-tab-rename-input {
+      flex: 1;
+      min-width: 120px;
+      max-width: 320px;
+      background: transparent;
+      border: none;
+      border-bottom: 1px solid var(--ui-accent-color);
+      outline: none;
+      font: inherit;
+      font-size: 13px;
+      color: var(--color-text-primary);
+      padding: 0 2px;
+      margin: 0;
+    }
+
+    &.renaming .sb-tab-close {
+      display: none;
+    }
+
     .sb-tab-close {
       opacity: 0;
       flex-shrink: 0;

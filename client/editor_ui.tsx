@@ -846,6 +846,12 @@ export class MainUI {
               this.pendingNewTab = true;
               client.startPageNavigate("all");
             }}
+            onRename={async (_tabId, newPageName) => {
+              await client.clientSystem.system.invokeFunction(
+                "index.renamePageCommand",
+                [{ page: newPageName }],
+              );
+            }}
           />
           <Breadcrumbs
             pageName={currentPageName}
