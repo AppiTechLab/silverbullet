@@ -1,9 +1,9 @@
 import type { EditorState } from "@codemirror/state";
-import { foldedRanges, syntaxTree } from "@codemirror/language";
-import { Decoration } from "@codemirror/view";
+import { syntaxTree } from "@codemirror/language";
+import { Decoration, WidgetType } from "@codemirror/view";
 import {
   decoratorStateField,
-  HtmlWidget,
+  hideBlockSource,
   isCursorInRange,
   LinkWidget,
 } from "./util.ts";
@@ -15,53 +15,203 @@ import {
   frontmatterWikiLinkRegex,
 } from "../markdown_parser/constants.ts";
 import { processWikiLink, type WikiLinkMatch } from "./wiki_link_processor.ts";
+import YAML from "js-yaml";
+
+// ── Value renderer helpers ────────────────────────────────────────────────────
+
+function renderFmValue(value: any): DocumentFragment {
+  const frag = document.createDocumentFragment();
+
+  if (value === null || value === undefined) {
+    const el = document.createElement("span");
+    el.className = "sb-fm-null";
+    el.textContent = "—";
+    frag.appendChild(el);
+    return frag;
+  }
+
+  if (Array.isArray(value)) {
+    for (const item of value) {
+      const chip = document.createElement("span");
+      chip.className = "sb-fm-chip";
+      chip.textContent = String(item);
+      frag.appendChild(chip);
+    }
+    return frag;
+  }
+
+  if (typeof value === "boolean") {
+    const el = document.createElement("span");
+    el.className = `sb-fm-bool sb-fm-bool-${value}`;
+    el.textContent = value ? "true" : "false";
+    frag.appendChild(el);
+    return frag;
+  }
+
+  if (typeof value === "number") {
+    const el = document.createElement("span");
+    el.className = "sb-fm-number";
+    el.textContent = String(value);
+    frag.appendChild(el);
+    return frag;
+  }
+
+  if (value instanceof Date) {
+    const el = document.createElement("span");
+    el.className = "sb-fm-date";
+    // Format as YYYY-MM-DD to match the YAML input style
+    el.textContent = value.toISOString().slice(0, 10);
+    frag.appendChild(el);
+    return frag;
+  }
+
+  if (typeof value === "object") {
+    // Nested object: compact JSON display
+    const el = document.createElement("span");
+    el.className = "sb-fm-object";
+    el.textContent = JSON.stringify(value);
+    frag.appendChild(el);
+    return frag;
+  }
+
+  // String / default
+  const el = document.createElement("span");
+  el.className = "sb-fm-string";
+  el.textContent = String(value);
+  frag.appendChild(el);
+  return frag;
+}
+
+// ── Panel widget ──────────────────────────────────────────────────────────────
+
+class FrontmatterPanelWidget extends WidgetType {
+  constructor(
+    readonly yamlText: string,
+    readonly blockFrom: number,
+    readonly client: Client,
+  ) {
+    super();
+  }
+
+  toDOM(): HTMLElement {
+    const panel = document.createElement("div");
+    panel.className = "sb-frontmatter-panel";
+
+    // Header row
+    const header = document.createElement("div");
+    header.className = "sb-fm-header";
+    header.innerHTML =
+      `<i class="ti ti-list"></i><span>Properties</span><i class="ti ti-pencil sb-fm-edit-icon"></i>`;
+    panel.appendChild(header);
+
+    // Parse YAML
+    let parsed: Record<string, any> = {};
+    try {
+      const result = YAML.load(this.yamlText);
+      if (result && typeof result === "object" && !Array.isArray(result)) {
+        parsed = result as Record<string, any>;
+      }
+    } catch {
+      const err = document.createElement("div");
+      err.className = "sb-fm-error";
+      err.textContent = "⚠ Invalid YAML in frontmatter";
+      panel.appendChild(err);
+      this._attachClick(panel);
+      return panel;
+    }
+
+    const entries = Object.entries(parsed);
+    if (entries.length === 0) {
+      const empty = document.createElement("div");
+      empty.className = "sb-fm-empty";
+      empty.textContent = "No properties";
+      panel.appendChild(empty);
+      this._attachClick(panel);
+      return panel;
+    }
+
+    for (const [key, value] of entries) {
+      const row = document.createElement("div");
+      row.className = "sb-fm-row";
+
+      const keyEl = document.createElement("span");
+      keyEl.className = "sb-fm-key";
+      keyEl.textContent = key;
+      row.appendChild(keyEl);
+
+      const valEl = document.createElement("span");
+      valEl.className = "sb-fm-value";
+      valEl.appendChild(renderFmValue(value));
+      row.appendChild(valEl);
+
+      panel.appendChild(row);
+    }
+
+    this._attachClick(panel);
+    return panel;
+  }
+
+  private _attachClick(panel: HTMLElement) {
+    panel.addEventListener("click", () => {
+      // Move cursor to just inside the frontmatter (after "---\n")
+      this.client.editorView.dispatch({
+        selection: { anchor: this.blockFrom + 4 },
+      });
+      this.client.focus();
+    });
+  }
+
+  override eq(other: WidgetType): boolean {
+    return (
+      other instanceof FrontmatterPanelWidget &&
+      other.yamlText === this.yamlText
+    );
+  }
+}
+
+// ── Plugin ────────────────────────────────────────────────────────────────────
 
 export function frontmatterPlugin(client: Client) {
   return decoratorStateField((state: EditorState) => {
     const widgets: any[] = [];
-    const foldRanges = foldedRanges(state);
     const shortWikiLinks = client.config.get("shortWikiLinks", true);
 
     syntaxTree(state).iterate({
       enter(node) {
-        if (node.name === "FrontMatterMarker") {
-          const parent = node.node.parent!;
+        // ── Rendered panel (cursor outside) ───────────────────────────────────
+        if (node.name === "FrontMatter") {
+          const { from, to } = node;
+          if (isCursorInRange(state, [from, to])) return;
 
-          const folded = foldRanges.iter();
-          let shouldShowFrontmatterBanner = false;
-          while (folded.value) {
-            // Check if cursor is in the folded range
-            if (isCursorInRange(state, [folded.from, folded.to])) {
-              // console.log("Cursor is in folded area, ");
-              shouldShowFrontmatterBanner = true;
-              break;
+          // Extract YAML text from FrontMatterCode child
+          let yamlText = "";
+          node.node.cursor().iterate((child) => {
+            if (child.name === "FrontMatterCode") {
+              yamlText = state.sliceDoc(child.from, child.to);
             }
-            folded.next();
-          }
-          if (!isCursorInRange(state, [parent.from, parent.to])) {
-            widgets.push(
-              Decoration.line({
-                class: "sb-line-frontmatter-outside",
-              }).range(node.from),
-            );
-            shouldShowFrontmatterBanner = true;
-          }
-          if (shouldShowFrontmatterBanner && parent.from === node.from) {
-            // Only put this on the first line of the frontmatter
-            widgets.push(
-              Decoration.widget({
-                widget: new HtmlWidget(`frontmatter`, "sb-frontmatter-marker"),
-              }).range(node.from),
-            );
-          }
+          });
+
+          // Hide the raw YAML lines
+          hideBlockSource(widgets, state, from, to, "start");
+
+          // Inject the panel widget at the start of the block
+          widgets.push(
+            Decoration.widget({
+              widget: new FrontmatterPanelWidget(yamlText, from, client),
+              block: true,
+            }).range(from),
+          );
+
+          return false; // don't descend — we've handled this node
         }
 
-        // Render links inside frontmatter code as clickable anchors (external and wiki links)
+        // ── Link decoration (cursor is inside frontmatter) ────────────────────
         if (node.name === "FrontMatterCode") {
           const oFrom = node.from;
           const oTo = node.to;
 
-          if (isCursorInRange(state, [oFrom, oTo])) {
+          if (!isCursorInRange(state, [oFrom, oTo])) {
+            // Panel is showing — skip link decoration
             return;
           }
 
@@ -73,7 +223,7 @@ export function frontmatterPlugin(client: Client) {
             const to = from + oMatch[0].length;
             const text = state.sliceDoc(from, to);
 
-            // 1) External links: http(s), <scheme>:// URLs
+            // External links
             frontmatterUrlRegex.lastIndex = 0;
             let match: RegExpExecArray | null;
             while ((match = frontmatterUrlRegex.exec(text)) !== null) {
@@ -90,7 +240,6 @@ export function frontmatterPlugin(client: Client) {
                     from: mFrom,
                     callback: (e) => {
                       if (e.altKey) {
-                        // Move cursor into the link
                         client.editorView.dispatch({
                           selection: { anchor: mFrom },
                         });
@@ -98,9 +247,6 @@ export function frontmatterPlugin(client: Client) {
                         return;
                       }
                       try {
-                        // Open http(s) links in a new window/tab, open
-                        // alternate schemes in the same page, as they'll
-                        // bounce to another application.
                         if (/^https?:\/\//i.test(url)) {
                           globalThis.open(url, "_blank");
                         } else {
@@ -115,13 +261,11 @@ export function frontmatterPlugin(client: Client) {
               );
             }
 
-            // 2) Internal links: WikiLinks [[...]] (make navigable)
+            // Wiki links
             frontmatterWikiLinkRegex.lastIndex = 0;
             let wMatch: RegExpExecArray | null;
             while ((wMatch = frontmatterWikiLinkRegex.exec(text)) !== null) {
-              if (!wMatch || !wMatch.groups) {
-                return;
-              }
+              if (!wMatch?.groups) return;
               const mFrom = from + (wMatch.index ?? 0);
               const mTo = mFrom + wMatch[0].length;
 
@@ -143,7 +287,6 @@ export function frontmatterPlugin(client: Client) {
                 state,
                 callback: (e, ref) => {
                   if (e.altKey) {
-                    // Move cursor into the link's content
                     client.editorView.dispatch({
                       selection: {
                         anchor: mFrom + wikiLinkMatch.leadingTrivia.length,
@@ -159,7 +302,7 @@ export function frontmatterPlugin(client: Client) {
               widgets.push(...decorations);
             }
 
-            // 3) mailto:... links
+            // Mailto links
             frontmatterMailtoRegex.lastIndex = 0;
             let mMatch: RegExpExecArray | null;
             while ((mMatch = frontmatterMailtoRegex.exec(text)) !== null) {
@@ -177,7 +320,6 @@ export function frontmatterPlugin(client: Client) {
                     from: mFrom,
                     callback: (e) => {
                       if (e.altKey) {
-                        // Move cursor into the link
                         client.editorView.dispatch({
                           selection: { anchor: mFrom },
                         });
@@ -198,6 +340,7 @@ export function frontmatterPlugin(client: Client) {
         }
       },
     });
+
     return Decoration.set(widgets, true);
   });
 }

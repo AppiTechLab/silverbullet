@@ -344,6 +344,114 @@
     color: transparent;
   }
 
+  // ── Obsidian-style frontmatter properties panel ──────────────────────────
+  .sb-frontmatter-panel {
+    display: block;
+    border: 1px solid var(--editor-border-color, #ddd);
+    border-radius: 6px;
+    margin: 4px 0 8px 0;
+    overflow: hidden;
+    font-size: 0.9em;
+    cursor: pointer;
+    background: var(--editor-bg, #fff);
+
+    &:hover {
+      border-color: var(--editor-link-color, #4a90d9);
+    }
+
+    .sb-fm-header {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 10px;
+      font-size: 0.8em;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--editor-meta-color, #888);
+      border-bottom: 1px solid var(--editor-border-color, #ddd);
+      background: var(--editor-code-background, #f6f6f6);
+
+      span {
+        flex: 1;
+      }
+
+      .sb-fm-edit-icon {
+        opacity: 0;
+        transition: opacity 0.15s;
+      }
+    }
+
+    &:hover .sb-fm-edit-icon {
+      opacity: 1;
+    }
+
+    .sb-fm-row {
+      display: flex;
+      align-items: baseline;
+      padding: 4px 10px;
+      border-bottom: 1px solid var(--editor-border-color, #eee);
+      gap: 8px;
+
+      &:last-child {
+        border-bottom: none;
+      }
+
+      &:hover {
+        background: var(--editor-hover-bg, rgba(0,0,0,0.03));
+      }
+    }
+
+    .sb-fm-key {
+      min-width: 110px;
+      font-size: 0.85em;
+      font-weight: 500;
+      color: var(--editor-meta-color, #666);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .sb-fm-value {
+      flex: 1;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+      align-items: center;
+    }
+
+    .sb-fm-string,
+    .sb-fm-number,
+    .sb-fm-date,
+    .sb-fm-object {
+      color: var(--editor-fg, #333);
+    }
+
+    .sb-fm-null {
+      color: var(--editor-meta-color, #aaa);
+    }
+
+    .sb-fm-chip {
+      display: inline-block;
+      padding: 1px 8px;
+      border-radius: 12px;
+      font-size: 0.82em;
+      background: var(--editor-tag-background, rgba(74,144,217,0.12));
+      color: var(--editor-link-color, #4a90d9);
+      white-space: nowrap;
+    }
+
+    .sb-fm-bool-true  { color: #2a9d2a; }
+    .sb-fm-bool-false { color: #c0392b; }
+
+    .sb-fm-error,
+    .sb-fm-empty {
+      padding: 6px 10px;
+      color: var(--editor-meta-color, #999);
+      font-style: italic;
+    }
+  }
+
   .sb-line-blockquote {
     text-indent: -2ch;
   }
@@ -735,12 +843,6 @@
     height: 1.1em;
     display: inline-flex;
     vertical-align: middle;
-  }
-
-  .sb-frontmatter-marker {
-    float: right;
-    font-size: 80%;
-    padding-right: 7px;
   }
 
   .cm-scroller {

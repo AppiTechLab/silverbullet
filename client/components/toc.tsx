@@ -1,4 +1,10 @@
 import type { Heading } from "../codemirror/toc.ts";
+import { emojiMap } from "../codemirror/emojiList.ts";
+
+const EMOJI_RE = /:[a-z0-9_+-]+:/g;
+function replaceEmoji(text: string): string {
+  return text.replace(EMOJI_RE, (m) => emojiMap[m] ?? m);
+}
 
 interface TocProps {
   headings: Heading[];
@@ -18,9 +24,9 @@ export function Toc({ headings, activeHeading, onHeadingClick }: TocProps) {
           className={`sb-toc-item${i === activeHeading ? " active" : ""}`}
           style={{ paddingLeft: `${(h.level - 1) * 12}px` }}
           onClick={() => onHeadingClick(h.from)}
-          title={h.text}
+          title={replaceEmoji(h.text)}
         >
-          {h.text}
+          {replaceEmoji(h.text)}
         </div>
       ))}
     </div>

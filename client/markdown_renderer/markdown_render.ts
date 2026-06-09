@@ -17,6 +17,9 @@ import { Fragment, RawHtml, renderHtml, type Tag } from "./html_render.ts";
 import { CustomSyntaxRenderedHtmlType } from "./inline.ts";
 import * as TagConstants from "../../plugs/index/constants.ts";
 import { extractHashtag } from "@silverbulletmd/silverbullet/lib/tags";
+import { emojiMap } from "../codemirror/emojiList.ts";
+
+const EMOJI_RE = /:[a-z0-9_+-]+:/g;
 import { justifiedTableRender } from "./justified_tables.ts";
 import type { PageMeta } from "@silverbulletmd/silverbullet/type/index";
 import { createMediaElement } from "./inline.ts";
@@ -690,7 +693,7 @@ function render(t: ParseTree, options: MarkdownRenderOptions = {}): Tag | null {
 
     // Text
     case undefined:
-      return t.text!;
+      return t.text!.replace(EMOJI_RE, (m) => emojiMap[m] ?? m);
     default:
       if (options.failOnUnknown) {
         removeParentPointers(t);
