@@ -234,14 +234,18 @@ export class Client {
     // queue, refresh the page list cache so its index-backed branch
     // can flip pageListLoaded and unblock widget rendering.
     this.eventHook.addLocalListener("mq:emptyQueue:indexQueue", async () => {
-      if (this.widgetReadyDispatched) return;
-      if (
-        !this.pageListLoaded &&
-        (await this.objectIndex.hasFullIndexCompleted())
-      ) {
-        this.fullIndexCompleted = true;
-        await this.updatePageListCache();
+      if (!this.widgetReadyDispatched) {
+        // Still in initial load — also flip the fullIndexCompleted flag.
+        if (
+          !this.pageListLoaded &&
+          (await this.objectIndex.hasFullIndexCompleted())
+        ) {
+          this.fullIndexCompleted = true;
+        }
       }
+      // Always refresh after the index queue drains — covers both the initial
+      // load and any subsequent external file changes picked up by the 10 s poll.
+      await this.updatePageListCache().catch(console.error);
     });
 
     // Instantiate a PlugOS system
@@ -453,6 +457,14 @@ export class Client {
         this.clientSystem.allKnownFiles.add(f.name);
       });
       this.clientSystem.knownFilesLoaded = true;
+    });
+
+    // Sidebar live refresh: update page list immediately on in-app writes/deletes.
+    this.eventHook.addLocalListener("page:saved", () => {
+      this.updatePageListCache().catch(console.error);
+    });
+    this.eventHook.addLocalListener("page:deleted", () => {
+      this.updatePageListCache().catch(console.error);
     });
 
     this.space.watch();
