@@ -398,7 +398,7 @@
       }
 
       &:hover {
-        background: var(--editor-hover-bg, rgba(0,0,0,0.03));
+        background: var(--editor-hover-bg, rgba(0, 0, 0, 0.03));
       }
     }
 
@@ -436,13 +436,18 @@
       padding: 1px 8px;
       border-radius: 12px;
       font-size: 0.82em;
-      background: var(--editor-tag-background, rgba(74,144,217,0.12));
+      background: var(--editor-tag-background, rgba(74, 144, 217, 0.12));
       color: var(--editor-link-color, #4a90d9);
       white-space: nowrap;
     }
 
-    .sb-fm-bool-true  { color: #2a9d2a; }
-    .sb-fm-bool-false { color: #c0392b; }
+    .sb-fm-bool-true {
+      color: #2a9d2a;
+    }
+
+    .sb-fm-bool-false {
+      color: #c0392b;
+    }
 
     .sb-fm-error,
     .sb-fm-empty {
@@ -496,7 +501,8 @@
 
   table {
     width: 100%;
-    border-spacing: 0;
+    border-collapse: collapse;
+    border: 1px solid var(--nav-border-color);
   }
 
   thead tr {
@@ -506,13 +512,14 @@
   thead tr td {
     // Primarily to make the column headers look reasonable with the button bar that may be put on top
     padding: 11px 8px;
-    border-bottom: 2px solid var(--editor-border-color, #ccc);
+    border-bottom: 2px solid var(--nav-border-color);
   }
 
   th,
   td {
     padding: 8px;
     white-space: nowrap;
+    border: 1px solid var(--nav-border-color);
   }
 
   // Table alignment classes for justified tables

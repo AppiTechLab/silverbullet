@@ -260,12 +260,12 @@
 }
 
 thead tr {
-  background-color: var(--editor-table-head-background-color);
+  background-color: transparent;
   color: var(--editor-table-head-color);
 }
 
-tbody tr:nth-of-type(even) {
-  background-color: var(--editor-table-even-background-color);
+tbody tr {
+  background-color: transparent;
 }
 
 .sb-line-blockquote {
