@@ -19,17 +19,12 @@ end)}
 ${widgets.commandButton("System: Reload")}
 
 ## Top and bottom widgets
-* Table of contents: shows a table of contents for your page
 * Linked mentions: show a list of links that link to the current page, at the bottom of your page
 * Linked tasks: shows a list of tasks that link to the current page, at the top of the page
 
 These can each be individually enabled/disabled and configured in your `CONFIG` page (use `space-lua` instead of `lua`):
 
 ```lua
--- Disable TOC altogether
-config.set("std.widgets.toc.enabled", false)
--- Only render a TOC when there's >= 5 headers
-config.set("std.widgets.toc.minHeaders", 5)
 -- Disable linked mentions altogether
 config.set("std.widgets.linkedMentions.enabled", false)
 -- Disable linked tasks altogether
@@ -79,171 +74,16 @@ function widgets.subPages(pageName)
 end
 ```
 
-## Table of contents
-```space-style
-.sb-toc-summary {
-  cursor: pointer;
-  font-weight: bold;
-  user-select: none;
-  padding: 15px 10px;
-  margin: -10px -10px 0 -10px;
-  background-color: var(--editor-widget-background-color);
-}
-.sb-toc-content {
-  padding-top: 0.5rem;
-}
-.sb-toc-item {
-  padding: 0.1rem 0;
-}
-.sb-toc-link {
-  cursor: pointer;
-  text-decoration: none;
-}
-```
-
+## Linked mentions
 ```space-lua
 -- priority: 10
 widgets = widgets or {}
 
 config.defineCategory {
   name = "Widgets",
-  description = "Enable and configure built-in widgets (table of contents, linked mentions, etc.)",
+  description = "Enable and configure built-in widgets (linked mentions, linked tasks, etc.)",
   priority = 45,
 }
-
--- configuration schema
-config.define("std.widgets.toc", {
-  type = "object",
-  properties = {
-    enabled = {
-      type = "boolean",
-      default = false,
-      description = "Show a table of contents at the top of pages",
-      ui = { category = "Widgets", label = "Table of Contents", priority = 4 },
-    },
-    minHeaders = {
-      type = "number",
-      default = 3,
-      description = "Minimum number of headers required before rendering a table of contents at all.",
-      ui = { category = "Widgets", label = "Minimum headers for TOC", priority = 3 },
-    },
-  }
-})
-
-function widgets.toc(options)
-  options = options or config.get("std.widgets.toc", {})
-  options.minHeaders = options.minHeaders or 3
-  options.minLevel = options.minLevel or 1
-  options.header = options.header or "Table of Contents"
-  local defaultOpen = (options.defaultOpen ~= false) or nil
-
-  local text = editor.getText()
-  local pageName = editor.getCurrentPage()
-  local parsedMarkdown = markdown.parseMarkdown(text)
-
-  -- Collect all headers
-  local headers = {}
-  for topLevelChild in parsedMarkdown.children do
-    if topLevelChild.type then
-      local headerLevel = string.match(topLevelChild.type, "^ATXHeading(%d+)")
-      if headerLevel then
-        local text = ""
-        table.remove(topLevelChild.children, 1)
-        for child in topLevelChild.children do
-          text = text .. string.trim(markdown.renderParseTree(child))
-        end
-        -- Strip link syntax to avoid nested brackets in TOC
-        text = string.gsub(text, "%[%[(.-)%]%]", "%1")
-
-        if text != "" then
-          table.insert(headers, {
-            name = text,
-            pos = topLevelChild.from,
-            level = tonumber(headerLevel)
-          })
-        end
-      end
-    end
-  end
-
-  if options.minHeaders and options.minHeaders > #headers then
-    return widget.new{}
-  end
-
-  -- Filter headers to display
-  local headersToDisplay = {}
-  for _, header in ipairs(headers) do
-    if not (options.maxHeader and header.level > options.maxHeader or
-            header.level < options.minLevel) then
-      table.insert(headersToDisplay, header)
-    end
-  end
-  
-  -- Find min level
-  local minLevel = 6
-  for _, header in ipairs(headersToDisplay) do
-    minLevel = math.min(minLevel, header.level)
-  end
-
-  -- Build a nested ul/li structure based on heading levels
-  local function buildTocList(headers)
-    local root = dom.ul {  }
-    local stack = { { node = root, level = minLevel - 1, lastLi = nil } }
-
-    for _, header in ipairs(headers) do
-      -- Pop back up when heading is at same or higher level
-      while #stack > 1 and stack[#stack].level >= header.level do
-        table.remove(stack)
-      end
-
-      -- Open nested <ul>s for deeper headings
-      while stack[#stack].level < header.level - 1 do
-        local newUl = dom.ul {}
-        -- Attach nested list to the last <li> in the current level, or create one if needed
-        local parent = stack[#stack].lastLi or dom.li {}
-        if not stack[#stack].lastLi then
-          stack[#stack].node.appendChild(parent)
-        end
-        parent.appendChild(newUl)
-        table.insert(stack, { node = newUl, level = stack[#stack].level + 1, lastLi = nil })
-      end
-
-      -- Create the <li> with link
-      local li = dom.li {
-        dom.a {
-          onclick = function()
-            editor.navigate({ page = pageName, pos = header.pos })
-          end,
-          class = "sb-toc-link",
-          __rawText = header.name
-        }
-      }
-      stack[#stack].node.appendChild(li)
-      stack[#stack].lastLi = li
-    end
-
-    return root
-  end
-
-  -- Wrap in a <details> element for native show/hide toggle
-  return widget.new {
-    html = dom.details {
-      open = defaultOpen,
-      dom.summary {
-        class = "sb-toc-summary",
-        options.header
-      },
-      buildTocList(headersToDisplay)
-    },
-    display = "block"
-  }
-end
-```
-
-## Linked mentions
-```space-lua
--- priority: 10
-widgets = widgets or {}
 
 local mentionTemplate = template.new [==[
 **[[${_.page}@${_.start}]]**:
