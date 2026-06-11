@@ -1,6 +1,26 @@
+# Normalize all text files to LF in the repository and on checkout.
+# This project is built and run inside Linux containers, so LF everywhere
+# avoids the "821 files modified" CRLF noise from Windows checkouts and keeps
+# merges with upstream clean. Binary files are auto-detected and left alone.
+* text=auto eol=lf
+
 # Shell scripts must use LF endings so they run inside Linux containers.
 # Without this, a Windows checkout (autocrlf) writes CRLF, and the Docker
 # entrypoint fails with "/bin/bash: - : invalid option".
 *.sh text eol=lf
 docker-entrypoint.sh text eol=lf
 docker-entrypoint*.sh text eol=lf
+
+# Binary assets — never normalize (text=auto usually detects these, but be explicit).
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.webp binary
+*.woff binary
+*.woff2 binary
+*.ttf binary
+*.otf binary
+*.pdf binary
+*.zip binary
