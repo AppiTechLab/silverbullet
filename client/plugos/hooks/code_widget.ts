@@ -6,6 +6,14 @@ import type { CodeWidgetCallback } from "@silverbulletmd/silverbullet/type/clien
 export class CodeWidgetHook implements Hook<CodeWidgetT> {
   codeWidgetCallbacks = new Map<string, CodeWidgetCallback>();
   codeWidgetModes = new Map<string, "markdown" | "iframe">();
+  // Built-in callbacks registered before plug loading; they take final
+  // precedence so a broken/outdated plug cannot shadow a native implementation.
+  private builtinCallbacks = new Map<string, CodeWidgetCallback>();
+
+  /** Register a built-in code widget that survives plug reloads. */
+  registerBuiltin(lang: string, callback: CodeWidgetCallback) {
+    this.builtinCallbacks.set(lang, callback);
+  }
 
   collectAllCodeWidgets(system: System<CodeWidgetT>) {
     this.codeWidgetCallbacks.clear();
@@ -28,6 +36,11 @@ export class CodeWidgetHook implements Hook<CodeWidgetT> {
         );
       }
     }
+    // Apply builtins last - they override any plug-supplied callback for the
+    // same language (e.g. a stale community plug that calls a removed API).
+    for (const [lang, cb] of this.builtinCallbacks) {
+      this.codeWidgetCallbacks.set(lang, cb);
+    }
   }
 
   apply(system: System<CodeWidgetT>): void {
@@ -46,7 +59,7 @@ export class CodeWidgetHook implements Hook<CodeWidgetT> {
         continue;
       }
       if (typeof functionDef.codeWidget !== "string") {
-        errors.push(`Codewidgets require a string name.`);
+        errors.push("Codewidgets require a string name.");
       }
     }
     return errors;

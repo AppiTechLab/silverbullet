@@ -1,0 +1,43 @@
+services:
+  traefik:
+    image: traefik:v3
+    restart: unless-stopped
+    command:
+      - "--providers.docker=true"
+      - "--providers.docker.exposedByDefault=false"
+      - "--entryPoints.web.address=:80"
+      - "--entryPoints.websecure.address=:443"
+      # Redirect all HTTP to HTTPS
+      - "--entryPoints.web.http.redirections.entryPoint.to=websecure"
+      - "--entryPoints.web.http.redirections.entryPoint.scheme=https"
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+
+  silverbullet:
+    # Build from this repo. To use the published image instead, replace
+    # `build: .` with:  image: ghcr.io/silverbulletmd/silverbullet
+    build: .
+    restart: unless-stopped
+    environment:
+      # Required: credentials in user:password form (set in .env).
+      # Without this, anyone reaching the server can read/edit your space.
+      - SB_USER=${SB_USER:?Set SB_USER in .env, e.g. SB_USER=antoine:change-me}
+      # Note: the image already sets SB_HOSTNAME=0.0.0.0 (the -L0.0.0.0
+      # equivalent) so it accepts connections from Traefik. Port 3000 is
+      # intentionally NOT published on the host: only Traefik (HTTPS) reaches it.
+    volumes:
+      - space:/space
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.silverbullet.rule=PathPrefix(`/`)"
+      - "traefik.http.routers.silverbullet.entrypoints=websecure"
+      # No domain/ACME configured, so Traefik serves its built-in
+      # self-signed certificate. Browsers will warn once; accept it.
+      - "traefik.http.routers.silverbullet.tls=true"
+      - "traefik.http.services.silverbullet.loadbalancer.server.port=3000"
+
+volumes:
+  space:

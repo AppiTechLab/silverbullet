@@ -192,6 +192,13 @@ export function mountIFrame(
             script: resolvedContent.script,
             theme: document.getElementsByTagName("html")[0].dataset.theme,
           });
+        } else if (resolvedContent.markdown) {
+          // Render plain markdown/error text so it's visible rather than blank
+          iframe.contentWindow!.postMessage({
+            type: "html",
+            html: `<pre style="color:red;padding:8px;white-space:pre-wrap">${resolvedContent.markdown.replace(/</g, "&lt;")}</pre>`,
+            theme: document.getElementsByTagName("html")[0].dataset.theme,
+          });
         } else if (resolvedContent.url) {
           iframe.contentWindow!.location.href = resolvedContent.url;
           if (resolvedContent.height) {

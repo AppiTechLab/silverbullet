@@ -107,6 +107,37 @@ export class ClientSystem {
 
     // Code widget hook
     this.codeWidgetHook = new CodeWidgetHook();
+    // Built-in kanban widget - bridges fenced ```kanban blocks to the
+    // Space Lua widgets.kanban() function. Registered as a builtin so it
+    // survives plug reloads and overrides any stale community plug.
+    this.codeWidgetHook.registerBuiltin(
+      "kanban",
+      async (body: string, _pageName: string) => {
+        try {
+          const luaBody = body.trim();
+          // Body may be empty (defaults) or a Lua table expression
+          const expr = luaBody.startsWith("{")
+            ? `widgets.kanban(${luaBody})`
+            : `widgets.kanban({})`;
+          const result = await this.system.localSyscall(
+            "lua.evalExpression",
+            [expr],
+          );
+          if (result && typeof result.html === "string") {
+            return { html: result.html };
+          }
+          return {
+            html: "<em style='padding:8px;display:block'>Empty kanban</em>",
+          };
+        } catch (e: any) {
+          return {
+            html: `<pre style="color:red;padding:8px;white-space:pre-wrap">${
+              String(e?.message ?? e).replace(/</g, "&lt;")
+            }</pre>`,
+          };
+        }
+      },
+    );
     this.system.addHook(this.codeWidgetHook);
 
     // Document editor hook
