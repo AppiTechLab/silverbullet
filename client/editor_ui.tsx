@@ -684,6 +684,12 @@ export class MainUI {
         <SidebarRail
           activeSection={viewState.activeSection}
           onSectionChange={(section) => {
+            // The "tasks" rail button opens the Run (command palette) window.
+            if (section === "tasks") {
+              void client.startCommandPalette();
+              setMobileNavOpen(false);
+              return;
+            }
             dispatch({ type: "set-active-section", section });
             setMobileNavOpen(false);
           }}

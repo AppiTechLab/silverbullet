@@ -12,7 +12,7 @@ const TOP_ITEMS: NavItem[] = [
   { id: "pages",  icon: "files",      title: "All pages" },
   { id: "search", icon: "search",     title: "Search"    },
   { id: "tags",   icon: "tag",        title: "Tags"      },
-  { id: "tasks",  icon: "list-check", title: "Tasks"     },
+  { id: "tasks",  icon: "terminal-2", title: "Run command" },
 ];
 
 const MID_ITEMS: NavItem[] = [
