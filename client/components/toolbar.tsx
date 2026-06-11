@@ -3,6 +3,25 @@ import type { EditorView } from "@codemirror/view";
 interface ToolbarProps {
   editorView: EditorView;
   readOnly?: boolean;
+  fileName?: string;
+}
+
+// Download the current editor contents as a .md file.
+function downloadMarkdown(view: EditorView, fileName?: string) {
+  const markdown = view.state.doc.toString();
+  const base = (fileName && fileName.trim()) ? fileName.trim() : "document";
+  // Use the last path segment and ensure a .md extension.
+  const leaf = base.split("/").pop() || base;
+  const name = leaf.endsWith(".md") ? leaf : `${leaf}.md`;
+  const blob = new Blob([markdown], { type: "text/markdown;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = name;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
 type ToolbarItem =
@@ -38,7 +57,7 @@ function insertAtLineStart(view: EditorView, prefix: string) {
   view.focus();
 }
 
-export function Toolbar({ editorView, readOnly }: ToolbarProps) {
+export function Toolbar({ editorView, readOnly, fileName }: ToolbarProps) {
   if (readOnly) return null;
 
   const items: ToolbarItem[] = [
@@ -96,8 +115,8 @@ export function Toolbar({ editorView, readOnly }: ToolbarProps) {
     {
       kind: "btn",
       icon: "share",
-      title: "Share / export",
-      action: () => {},
+      title: "Download as Markdown",
+      action: () => downloadMarkdown(editorView, fileName),
     },
   ];
 

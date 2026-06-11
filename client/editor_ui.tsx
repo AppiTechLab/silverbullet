@@ -933,6 +933,7 @@ export class MainUI {
           />
           <Toolbar
             editorView={client.editorView}
+            fileName={currentPageName}
             readOnly={
               viewState.uiOptions.forcedROMode || client.bootConfig.readOnly
             }
