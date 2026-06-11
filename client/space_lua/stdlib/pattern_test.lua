@@ -555,3 +555,23 @@ end, "unfinished capture")
 assertError(function()
     string.match("abc", "(ab(c)")
 end, "unfinished capture")
+
+-- 15. Non-Latin1 safety (surrogate pairs must not collide with ASCII patterns)
+
+-- The high surrogate of 🏢 is 0xD83C; truncated to a byte it equals "<" (0x3C).
+-- gsub on ASCII chars must leave emoji intact.
+local emojiStr = "[[🏢 Lab/Team/testkaban]]"
+assertEqual(string.gsub(emojiStr, "<", "&lt;"), emojiStr)
+assertEqual(string.gsub(emojiStr, ">", "&gt;"), emojiStr)
+assertEqual(string.gsub(emojiStr, "&", "&amp;"), emojiStr)
+
+-- Escaping mixed content preserves the emoji
+local mixed = string.gsub("a&🏢<b", "&", "&amp;")
+mixed = string.gsub(mixed, "<", "&lt;")
+assertEqual(mixed, "a&amp;🏢&lt;b")
+
+-- find must not falsely match ASCII inside surrogate pairs
+assertEqual(string.find("🏢", "<"), nil)
+
+-- literal emoji in a pattern still matches itself
+assertEqual(string.match("x🏢y", "x🏢y"), "x🏢y")

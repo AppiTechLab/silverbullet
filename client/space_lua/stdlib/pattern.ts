@@ -41,20 +41,23 @@ interface Capture {
 
 export interface MatchState {
   src: string; // original source string (for substring extraction)
-  s: Uint8Array; // source bytes
+  s: Uint16Array; // source code units
   slen: number;
-  p: Uint8Array; // pattern bytes
+  p: Uint16Array; // pattern code units
   plen: number;
   level: number;
   capture: Capture[]; // pre-allocated, length `MAX_CAPTURES`
   matchdepth: number;
 }
 
-function toBytes(s: string): Uint8Array {
+// One entry per UTF-16 code unit (NOT truncated to a byte). Truncating with
+// `& 0xff` made surrogate halves collide with ASCII (e.g. the high surrogate
+// of 🏢, 0xD83C, became 0x3C, i.e. "<"), corrupting emoji in gsub/find/match.
+function toBytes(s: string): Uint16Array {
   const len = s.length;
-  const arr = new Uint8Array(len);
+  const arr = new Uint16Array(len);
   for (let i = 0; i < len; i++) {
-    arr[i] = s.charCodeAt(i) & 0xff;
+    arr[i] = s.charCodeAt(i);
   }
   return arr;
 }
@@ -108,7 +111,7 @@ function matchClass(c: number, cl: number): boolean {
   return cl >= 97 && cl <= 122 ? res : !res;
 }
 
-function classEnd(p: Uint8Array, plen: number, pi: number): number {
+function classEnd(p: Uint16Array, plen: number, pi: number): number {
   const ch = p[pi];
   pi++;
   if (ch === CH_ESC) {
@@ -138,7 +141,7 @@ function classEnd(p: Uint8Array, plen: number, pi: number): number {
 
 function matchBracketClass(
   c: number,
-  p: Uint8Array,
+  p: Uint16Array,
   pi: number,
   ec: number,
 ): boolean {
