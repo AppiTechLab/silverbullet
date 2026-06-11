@@ -101,7 +101,15 @@ export function SidebarRail(
       <button className="sb-rail-btn" title="Settings">
         <i className="ti ti-settings" />
       </button>
-      <button className="sb-rail-btn" title="User">
+      <button
+        className="sb-rail-btn"
+        title="Log out"
+        onClick={() => {
+          if (confirm("Log out?")) {
+            location.href = ".logout";
+          }
+        }}
+      >
         <i className="ti ti-user-circle" />
       </button>
     </div>
