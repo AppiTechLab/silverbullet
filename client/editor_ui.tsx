@@ -279,7 +279,21 @@ export class MainUI {
   }
 
   ViewComponent() {
-    const [viewState, dispatch] = useReducer(reducer, initialViewState);
+    const [viewState, dispatch] = useReducer(reducer, initialViewState, (s) => {
+      let stored: string | null = null;
+      try {
+        stored = globalThis.localStorage?.getItem("darkMode") ?? null;
+      } catch {
+        // localStorage may be unavailable; fall back to OS preference
+      }
+      if (stored === "dark" || stored === "light") {
+        return {
+          ...s,
+          uiOptions: { ...s.uiOptions, darkMode: stored === "dark" },
+        };
+      }
+      return s;
+    });
     this.viewState = viewState;
     this.viewDispatch = dispatch;
 
@@ -651,6 +665,23 @@ export class MainUI {
           isAdmin={client.bootConfig.isAdmin ?? false}
           showToc={viewState.showToc}
           onToggleToc={() => dispatch({ type: "toggle-toc" })}
+          darkMode={viewState.uiOptions.darkMode === undefined
+            ? globalThis.matchMedia("(prefers-color-scheme: dark)").matches
+            : viewState.uiOptions.darkMode}
+          onToggleDarkMode={() => {
+            const effectiveDark =
+              document.documentElement.dataset.theme === "dark";
+            const next = !effectiveDark;
+            try {
+              globalThis.localStorage?.setItem(
+                "darkMode",
+                next ? "dark" : "light",
+              );
+            } catch {
+              // localStorage may be unavailable; toggle still works for the session
+            }
+            dispatch({ type: "set-ui-option", key: "darkMode", value: next });
+          }}
         />
         <SidebarNav
           activeSection={viewState.activeSection}

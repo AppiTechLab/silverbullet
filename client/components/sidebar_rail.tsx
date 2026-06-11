@@ -27,10 +27,21 @@ type Props = {
   isAdmin?: boolean;
   showToc: boolean;
   onToggleToc: () => void;
+  darkMode?: boolean;
+  onToggleDarkMode: () => void;
 };
 
 export function SidebarRail(
-  { activeSection, onSectionChange, categories, isAdmin, showToc, onToggleToc }: Props,
+  {
+    activeSection,
+    onSectionChange,
+    categories,
+    isAdmin,
+    showToc,
+    onToggleToc,
+    darkMode,
+    onToggleDarkMode,
+  }: Props,
 ) {
   return (
     <div id="sb-icon-rail">
@@ -97,6 +108,13 @@ export function SidebarRail(
         onClick={onToggleToc}
       >
         <i className="ti ti-list" />
+      </button>
+      <button
+        className="sb-rail-btn"
+        title={darkMode ? "Switch to light mode" : "Switch to dark mode"}
+        onClick={onToggleDarkMode}
+      >
+        <i className={`ti ti-${darkMode ? "sun" : "moon"}`} />
       </button>
       <button className="sb-rail-btn" title="Settings">
         <i className="ti ti-settings" />
