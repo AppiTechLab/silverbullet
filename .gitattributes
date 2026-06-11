@@ -1,0 +1,6 @@
+# Shell scripts must use LF endings so they run inside Linux containers.
+# Without this, a Windows checkout (autocrlf) writes CRLF, and the Docker
+# entrypoint fails with "/bin/bash: - : invalid option".
+*.sh text eol=lf
+docker-entrypoint.sh text eol=lf
+docker-entrypoint*.sh text eol=lf

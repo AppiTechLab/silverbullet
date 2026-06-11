@@ -88,6 +88,11 @@ export function editorSyscalls(client: Client): SysCallMapping {
     "editor.getCurrentPage": (): string => {
       return client.currentName();
     },
+    // Returns the currently authenticated username, or "" when auth is
+    // disabled (single-user mode).
+    "editor.getCurrentUser": (): string => {
+      return client.bootConfig.currentUser ?? "";
+    },
     "editor.getCurrentPageMeta": (): Promise<PageMeta | undefined> => {
       const name = client.currentName();
       return client.objectIndex.getObjectByRef(name, "page", name);

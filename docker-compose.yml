@@ -5,14 +5,12 @@ services:
     command:
       - "--providers.docker=true"
       - "--providers.docker.exposedByDefault=false"
-      - "--entryPoints.web.address=:80"
       - "--entryPoints.websecure.address=:443"
-      # Redirect all HTTP to HTTPS
-      - "--entryPoints.web.http.redirections.entryPoint.to=websecure"
-      - "--entryPoints.web.http.redirections.entryPoint.scheme=https"
     ports:
-      - "80:80"
-      - "443:443"
+      # HTTPS only, on host port 8443 to avoid conflicts with whatever already
+      # uses 80/443 on Windows (IIS, http.sys, etc.).
+      # Access the app at https://localhost:8443
+      - "8443:443"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
 
@@ -23,13 +21,15 @@ services:
     restart: unless-stopped
     environment:
       # Required: credentials in user:password form (set in .env).
+      # SB_USERS (plural) accepts multiple comma-separated users; SB_USER
+      # (singular) is one user only and is NOT comma-split.
       # Without this, anyone reaching the server can read/edit your space.
-      - SB_USER=${SB_USER:?Set SB_USER in .env, e.g. SB_USER=antoine:change-me}
+      - SB_USERS=${SB_USERS:?Set SB_USERS in .env, e.g. SB_USERS=antoine:change-me,bob:change-me}
       # Note: the image already sets SB_HOSTNAME=0.0.0.0 (the -L0.0.0.0
       # equivalent) so it accepts connections from Traefik. Port 3000 is
       # intentionally NOT published on the host: only Traefik (HTTPS) reaches it.
     volumes:
-      - space:/space
+      - C:\Tools\wiki:/space
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.silverbullet.rule=PathPrefix(`/`)"
