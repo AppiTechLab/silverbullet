@@ -2,6 +2,7 @@ package server
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -21,6 +22,31 @@ const (
 	DefaultPermission = PermWrite // open by default
 )
 
+// validPermission reports whether p is one of the three known levels.
+func validPermission(p Permission) bool {
+	return p == PermWrite || p == PermRead || p == PermNone
+}
+
+// isSystemPath reports whether a path must stay readable for the client to
+// boot, even under a restrictive default permission. These are the standard
+// library, compiled plugs, and top-level config/index pages. Explicit rules
+// still override this (see GetFolderPermission), so an admin can lock these
+// down deliberately if they really want to.
+func isSystemPath(p string) bool {
+	p = filepath.ToSlash(p)
+	if strings.HasPrefix(p, "Library/") {
+		return true
+	}
+	if strings.HasSuffix(p, ".plug.js") {
+		return true
+	}
+	switch p {
+	case "SETTINGS.md", "CONFIG.md", "index.md":
+		return true
+	}
+	return false
+}
+
 // SpacePermissions manages folder-level access control for a space.
 // It is safe for concurrent use.
 type SpacePermissions struct {
@@ -28,6 +54,10 @@ type SpacePermissions struct {
 	spacePath string
 	// store: folder-path → username → permission string
 	store map[string]map[string]string
+	// defaultPermission is the space-wide fallback when no rule matches.
+	// Defaults to PermWrite (open) for backward compatibility; set it to
+	// PermNone for a deny-by-default ("fail-closed") posture.
+	defaultPermission Permission
 }
 
 // NewSpacePermissions creates an in-memory permissions store for the given
@@ -35,13 +65,28 @@ type SpacePermissions struct {
 // Call Load() afterwards to merge any persisted rules.
 func NewSpacePermissions(spacePath, adminUser string) *SpacePermissions {
 	sp := &SpacePermissions{
-		spacePath: spacePath,
-		store:     make(map[string]map[string]string),
+		spacePath:         spacePath,
+		store:             make(map[string]map[string]string),
+		defaultPermission: DefaultPermission,
 	}
 	if adminUser != "" {
 		sp.store["_admin"] = map[string]string{adminUser: string(PermWrite)}
 	}
 	return sp
+}
+
+// SetDefaultPermission overrides the space-wide fallback permission. An empty
+// or invalid value resets it to the open default.
+func (sp *SpacePermissions) SetDefaultPermission(p Permission) {
+	if sp == nil {
+		return
+	}
+	if !validPermission(p) {
+		p = DefaultPermission
+	}
+	sp.mu.Lock()
+	sp.defaultPermission = p
+	sp.mu.Unlock()
 }
 
 func (sp *SpacePermissions) filePath() string {
@@ -94,9 +139,14 @@ func (sp *SpacePermissions) Save() error {
 }
 
 // GetFolderPermission returns the effective permission for filePath / username.
-// It tries the longest matching folder prefix first, then progressively shorter
-// ones, and finally falls back to DefaultPermission.
-// A nil receiver or empty username always returns PermWrite (no restrictions).
+//
+// Resolution walks from the longest matching folder prefix to the shortest.
+// At each folder that has a rule it checks, in order, an explicit entry for the
+// user, then a "*" wildcard entry. If neither matches, it keeps walking toward
+// the parent (so parent rules are inherited rather than shadowed). When no rule
+// matches at all it returns the space-wide default; under a deny-by-default
+// (PermNone) configuration, system paths are still granted read so the client
+// can boot. A nil receiver or empty username always returns PermWrite.
 func (sp *SpacePermissions) GetFolderPermission(filePath, username string) Permission {
 	if sp == nil || username == "" {
 		return PermWrite
@@ -114,21 +164,40 @@ func (sp *SpacePermissions) GetFolderPermission(filePath, username string) Permi
 	parts := strings.Split(filePath, "/")
 	for i := len(parts) - 1; i >= 1; i-- {
 		folder := strings.Join(parts[:i], "/")
-		if folderPerms, ok := sp.store[folder]; ok {
-			if perm, ok := folderPerms[username]; ok {
-				return Permission(perm)
-			}
-			// Folder rule exists but user not listed → open default.
-			return DefaultPermission
+		folderPerms, ok := sp.store[folder]
+		if !ok {
+			continue
 		}
+		if perm, ok := folderPerms[username]; ok {
+			return Permission(perm)
+		}
+		if perm, ok := folderPerms["*"]; ok {
+			return Permission(perm)
+		}
+		// Rule exists but doesn't cover this user → inherit from parent.
 	}
-	return DefaultPermission
+
+	// No matching rule: apply the space-wide default, with a read carve-out
+	// for system paths when the default is deny-by-default.
+	def := sp.defaultPermission
+	if def == "" {
+		def = DefaultPermission
+	}
+	if def == PermNone && isSystemPath(filePath) {
+		return PermRead
+	}
+	return def
 }
 
-// SetFolderPermission persists a single folder/user/permission triple.
+// SetFolderPermission persists a single folder/user/permission triple. The
+// permission must be one of write/read/none. The username may be "*" to set a
+// wildcard rule covering all otherwise-unlisted users.
 func (sp *SpacePermissions) SetFolderPermission(folder, username string, perm Permission) error {
 	if sp == nil {
 		return nil
+	}
+	if !validPermission(perm) {
+		return fmt.Errorf("invalid permission %q (must be write, read, or none)", perm)
 	}
 	sp.mu.Lock()
 	if _, ok := sp.store[folder]; !ok {

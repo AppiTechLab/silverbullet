@@ -84,6 +84,19 @@ export function PermissionsPanel({ currentUser }: Props) {
     return a.localeCompare(b);
   });
 
+  // Friendly label for a username row; "*" is the wildcard covering everyone
+  // not explicitly listed.
+  const userLabel = (username: string) =>
+    username === "*" ? "Everyone else" : username;
+
+  // Sort so the "*" wildcard always renders first within a folder.
+  const sortedUsers = (folder: string) =>
+    Object.entries(perms[folder]).sort(([a], [b]) => {
+      if (a === "*") return -1;
+      if (b === "*") return 1;
+      return a.localeCompare(b);
+    });
+
   return (
     <div className="sb-permissions-panel">
       <div className="sb-nav-section-label">Permissions</div>
@@ -106,9 +119,15 @@ export function PermissionsPanel({ currentUser }: Props) {
               </button>
             )}
           </div>
-          {Object.entries(perms[folder]).map(([username, perm]) => (
+          {sortedUsers(folder).map(([username, perm]) => (
             <div key={username} className="sb-permissions-user-row">
-              <span className="sb-permissions-username">{username}</span>
+              <span
+                className="sb-permissions-username"
+                title={username === "*" ? "Applies to all users without their own rule" : username}
+              >
+                {username === "*" && <i className="ti ti-users" style={{ marginRight: "4px" }} />}
+                {userLabel(username)}
+              </span>
               <select
                 className="sb-permissions-select"
                 value={perm}
@@ -130,6 +149,8 @@ export function PermissionsPanel({ currentUser }: Props) {
             </div>
           ))}
           <AddUserRow
+            isAdminFolder={folder === "_admin"}
+            hasWildcard={Object.prototype.hasOwnProperty.call(perms[folder], "*")}
             onAdd={(username, perm) => void setPermission(folder, username, perm)}
           />
         </div>
@@ -161,7 +182,13 @@ export function PermissionsPanel({ currentUser }: Props) {
   );
 }
 
-function AddUserRow({ onAdd }: { onAdd: (username: string, perm: PermissionLevel) => void }) {
+function AddUserRow(
+  { onAdd, hasWildcard, isAdminFolder }: {
+    onAdd: (username: string, perm: PermissionLevel) => void;
+    hasWildcard: boolean;
+    isAdminFolder: boolean;
+  },
+) {
   const [username, setUsername] = useState("");
   const [perm, setPerm] = useState<PermissionLevel>("write");
 
@@ -176,7 +203,7 @@ function AddUserRow({ onAdd }: { onAdd: (username: string, perm: PermissionLevel
     <div className="sb-permissions-add-user">
       <input
         className="sb-permissions-input sb-permissions-input-sm"
-        placeholder="Add user..."
+        placeholder="Add user (or * for everyone)…"
         value={username}
         onInput={(e) => setUsername((e.target as HTMLInputElement).value)}
         onKeyDown={(e) => { if (e.key === "Enter") submit(); }}
@@ -188,7 +215,7 @@ function AddUserRow({ onAdd }: { onAdd: (username: string, perm: PermissionLevel
       >
         <option value="write">Write</option>
         <option value="read">Read</option>
-        <option value="none">None</option>
+        {!isAdminFolder && <option value="none">None</option>}
       </select>
       <button
         className="sb-permissions-add-btn"
@@ -197,6 +224,15 @@ function AddUserRow({ onAdd }: { onAdd: (username: string, perm: PermissionLevel
       >
         <i className="ti ti-plus" />
       </button>
+      {!hasWildcard && !isAdminFolder && (
+        <button
+          className="sb-permissions-add-btn"
+          title="Make private: deny everyone else, then grant specific users"
+          onClick={() => onAdd("*", "none")}
+        >
+          <i className="ti ti-lock" /> Make private
+        </button>
+      )}
     </div>
   );
 }

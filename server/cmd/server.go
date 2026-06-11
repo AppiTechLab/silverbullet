@@ -159,6 +159,15 @@ func buildConfig(bundledFiles fs.FS, args []string, buildTime string) *server.Se
 			if loadErr := perms.Load(); loadErr != nil {
 				log.Printf("[permissions] Warning: could not load permissions file: %v", loadErr)
 			}
+			if dp := os.Getenv("SB_DEFAULT_PERMISSION"); dp != "" {
+				switch server.Permission(dp) {
+				case server.PermNone, server.PermRead, server.PermWrite:
+					perms.SetDefaultPermission(server.Permission(dp))
+					log.Printf("[permissions] Default permission: %s", dp)
+				default:
+					log.Printf("[permissions] Ignoring invalid SB_DEFAULT_PERMISSION=%q (use write, read, or none)", dp)
+				}
+			}
 			rootSpaceConfig.Permissions = perms
 			rootSpaceConfig.AdminUser = adminUser
 			log.Printf("[permissions] Folder-level permissions enabled, admin: %s", adminUser)

@@ -136,7 +136,14 @@ func Router(config *ServerConfig) chi.Router {
 			http.Error(w, "folder, username, and permission are required", http.StatusBadRequest)
 			return
 		}
-		if err := spaceConfig.Permissions.SetFolderPermission(body.Folder, body.Username, Permission(body.Permission)); err != nil {
+		// Reject unknown permission values as a client error (400) rather than
+		// surfacing them as a server fault.
+		perm := Permission(body.Permission)
+		if perm != PermWrite && perm != PermRead && perm != PermNone {
+			http.Error(w, "permission must be write, read, or none", http.StatusBadRequest)
+			return
+		}
+		if err := spaceConfig.Permissions.SetFolderPermission(body.Folder, body.Username, perm); err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}

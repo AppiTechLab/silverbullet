@@ -13,6 +13,7 @@ import { EventEmitter } from "../plugos/event.ts";
 
 const alwaysProxy = [
   "/.auth",
+  "/.api",
   "/.shell",
   "/.logout",
   "/.config",
