@@ -295,6 +295,16 @@ export class MainUI {
       return s;
     });
     this.viewState = viewState;
+
+    // Mobile off-canvas navigation drawer state. On narrow screens the icon
+    // rail + nav panel are hidden by default and slid in when this is true.
+    const [mobileNavOpen, setMobileNavOpen] = useState(false);
+    useEffect(() => {
+      document.getElementById("sb-root")?.classList.toggle(
+        "mobile-nav-open",
+        mobileNavOpen,
+      );
+    }, [mobileNavOpen]);
     this.viewDispatch = dispatch;
 
     const client = this.client;
@@ -516,6 +526,20 @@ export class MainUI {
       : "";
     return (
       <>
+        {/* Mobile-only: hamburger to open the nav drawer, and a backdrop to close it. */}
+        <button
+          className="sb-mobile-menu-btn"
+          title="Menu"
+          onClick={() => setMobileNavOpen(true)}
+        >
+          <i className="ti ti-menu-2" />
+        </button>
+        {mobileNavOpen && (
+          <div
+            className="sb-mobile-backdrop"
+            onClick={() => setMobileNavOpen(false)}
+          />
+        )}
         {viewState.showPageNavigator && (
           <AnythingPicker
             allDocuments={viewState.allDocuments}
@@ -659,8 +683,10 @@ export class MainUI {
         )}
         <SidebarRail
           activeSection={viewState.activeSection}
-          onSectionChange={(section) =>
-            dispatch({ type: "set-active-section", section })}
+          onSectionChange={(section) => {
+            dispatch({ type: "set-active-section", section });
+            setMobileNavOpen(false);
+          }}
           categories={categories}
           isAdmin={client.bootConfig.isAdmin ?? false}
           showToc={viewState.showToc}
@@ -692,10 +718,12 @@ export class MainUI {
           onPageSelect={(name) => {
             const ref = parseToRef(name);
             if (ref) void client.navigate(ref);
+            setMobileNavOpen(false);
           }}
           onTagSelect={(tagPage) => {
             const ref = parseToRef(tagPage);
             if (ref) void client.navigate(ref);
+            setMobileNavOpen(false);
           }}
           onSearch={() => {
             client.startPageNavigate("all");

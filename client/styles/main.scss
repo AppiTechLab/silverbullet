@@ -327,3 +327,80 @@ body {
 .sb-markdown-toolbar:hover {
   opacity: 1;
 }
+
+// ── Mobile off-canvas navigation ────────────────────────────────────────────
+// The hamburger button and backdrop are desktop-hidden; they only appear at the
+// mobile breakpoint below. On wide screens the icon rail and nav panel keep
+// their normal in-flow layout.
+.sb-mobile-menu-btn,
+.sb-mobile-backdrop {
+  display: none;
+}
+
+@media only screen and (max-width: 768px) {
+  // Icon rail and nav panel slide in from the left as an overlay instead of
+  // consuming horizontal layout space, so the editor gets the full width.
+  #sb-icon-rail {
+    position: fixed;
+    top: 0;
+    bottom: 0;
+    left: -48px;
+    height: 100%;
+    z-index: 31;
+    transition: left 0.2s ease;
+  }
+
+  #sb-nav-panel {
+    position: fixed;
+    top: 0;
+    bottom: 0;
+    left: -220px;
+    height: 100%;
+    z-index: 30;
+    transition: left 0.2s ease;
+    box-shadow: 2px 0 10px rgba(0, 0, 0, 0.25);
+  }
+
+  #sb-root.mobile-nav-open #sb-icon-rail {
+    left: 0;
+  }
+
+  #sb-root.mobile-nav-open #sb-nav-panel {
+    left: 48px;
+  }
+
+  // Dimmed backdrop shown while the drawer is open; tapping it closes the drawer.
+  .sb-mobile-backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 25;
+    background: rgba(0, 0, 0, 0.4);
+  }
+
+  // Floating button that opens the drawer.
+  .sb-mobile-menu-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: fixed;
+    top: 6px;
+    left: 6px;
+    z-index: 20;
+    width: 36px;
+    height: 36px;
+    padding: 0;
+    border: 1px solid var(--color-border-tertiary);
+    border-radius: 6px;
+    background: var(--color-background-primary);
+    color: var(--color-text-primary);
+    font-size: 18px;
+    cursor: pointer;
+    opacity: 0.9;
+  }
+
+  // Hide the floating button once the drawer is open (the rail is visible then).
+  #sb-root.mobile-nav-open .sb-mobile-menu-btn {
+    display: none;
+  }
+}
