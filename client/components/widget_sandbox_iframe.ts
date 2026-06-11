@@ -46,6 +46,25 @@ function updatePool(exclude?: PreloadedIFrame) {
   }
 }
 
+// Push a theme change to every in-use sandbox iframe currently in the DOM so
+// widgets (e.g. ```kanban) that style themselves via html[data-theme=...]
+// switch with the rest of the UI instead of keeping their render-time theme.
+export function broadcastWidgetTheme(theme: string | undefined) {
+  if (!theme) return;
+  for (const preloadedIframe of iframePool) {
+    if (
+      preloadedIframe.used &&
+      document.body.contains(preloadedIframe.iframe) &&
+      preloadedIframe.iframe.contentWindow
+    ) {
+      preloadedIframe.iframe.contentWindow.postMessage({
+        type: "set-theme",
+        theme,
+      });
+    }
+  }
+}
+
 export function prepareSandboxIFrame(): PreloadedIFrame {
   // console.log("Preloading iframe");
   const iframe = document.createElement("iframe");

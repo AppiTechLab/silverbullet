@@ -11,7 +11,7 @@ import { SidebarNav } from "./components/sidebar_nav.tsx";
 import { TabBar } from "./components/tab_bar.tsx";
 import { Toc } from "./components/toc.tsx";
 import { extractHeadings, type Heading } from "./codemirror/toc.ts";
-import { reloadAllWidgets } from "./codemirror/code_widget.ts";
+import { broadcastWidgetTheme } from "./components/widget_sandbox_iframe.ts";
 import { Breadcrumbs } from "./components/breadcrumbs.tsx";
 import { Toolbar } from "./components/toolbar.tsx";
 import { topLevelFolders, parseFolderMeta, type FolderMeta } from "./lib/folder_icon.ts";
@@ -323,7 +323,6 @@ export class MainUI {
       void this.client.dispatchAppEvent("editor:modeswitch");
     }, [viewState.uiOptions.vimMode]);
 
-    const themeInitialized = useRef(false);
     useEffect(() => {
       const updateTheme = () => {
         const darkMode =
@@ -331,20 +330,16 @@ export class MainUI {
             ? globalThis.matchMedia("(prefers-color-scheme: dark)").matches
             : viewState.uiOptions.darkMode;
 
-        document.documentElement.dataset.theme = darkMode ? "dark" : "light";
+        const theme = darkMode ? "dark" : "light";
+        document.documentElement.dataset.theme = theme;
 
         if (this.client.contentManager.isDocumentEditor()) {
           this.client.contentManager.documentEditor.updateTheme();
         }
 
-        // Sandboxed code widgets (e.g. ```kanban) live in iframes that only
-        // receive the theme when they render. On a theme *change* (not the
-        // initial load) re-render them so they pick up the new theme too.
-        if (themeInitialized.current) {
-          void reloadAllWidgets();
-        } else {
-          themeInitialized.current = true;
-        }
+        // Sandboxed code-widget iframes (e.g. ```kanban) only receive the theme
+        // at render time, so push the change to any that are already on screen.
+        broadcastWidgetTheme(theme);
       };
 
       updateTheme();

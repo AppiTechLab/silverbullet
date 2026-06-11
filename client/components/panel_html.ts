@@ -45,6 +45,11 @@ globalThis.addEventListener("message", (message) => {
         updateHeight();
       });
       break;
+    case "set-theme":
+      if (data.theme) {
+        document.getElementsByTagName("html")[0].setAttribute("data-theme", data.theme);
+      }
+      break;
     case "syscall-response":
       {
         const syscallId = data.id;
