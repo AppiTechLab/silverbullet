@@ -20,6 +20,16 @@ import {
   buildTranslateUrls,
 } from "./widget_util.ts";
 
+// Count a table's columns from its header row (falling back to the first body
+// row), used when appending a new empty row.
+function countTableColumns(t: ParseTree): number {
+  const children = t.children ?? [];
+  const row = children.find((c) => c.type === "TableHeader") ??
+    children.find((c) => c.type === "TableRow");
+  if (!row) return 0;
+  return (row.children ?? []).filter((c) => c.type === "TableCell").length;
+}
+
 class TableViewWidget extends WidgetType {
   tableBodyText: string;
 
@@ -71,6 +81,43 @@ class TableViewWidget extends WidgetType {
       setTimeout(() => {
         // Give it a tick to render
         attachWidgetEventHandlers(dom, this.client, this.tableBodyText);
+
+        // "+ Add row" affordance: appends an empty row to the table source and
+        // drops the cursor into its first cell, ready to type.
+        const addRowBtn = document.createElement("button");
+        addRowBtn.className = "sb-table-add-row";
+        addRowBtn.textContent = "+ Add row";
+        addRowBtn.title = "Add a row to this table";
+        Object.assign(addRowBtn.style, {
+          display: "block",
+          marginTop: "3px",
+          font: "inherit",
+          fontSize: "0.8em",
+          padding: "2px 8px",
+          cursor: "pointer",
+          borderRadius: "4px",
+          border: "1px solid var(--color-border-tertiary, #ddd)",
+          background: "var(--color-background-secondary, #f6f6f6)",
+          color: "var(--color-text-secondary, #555)",
+        });
+        addRowBtn.addEventListener("click", (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          const cols = countTableColumns(this.t);
+          if (cols <= 0) return;
+          const tableEnd = this.t.to;
+          const newRow = "\n|" + "  |".repeat(cols);
+          try {
+            this.client.editorView.dispatch({
+              changes: { from: tableEnd, to: tableEnd, insert: newRow },
+              selection: { anchor: tableEnd + 3 },
+            });
+            this.client.focus?.();
+          } catch (err) {
+            console.error("Add row failed", err);
+          }
+        });
+        dom.appendChild(addRowBtn);
 
         this.client.widgetCache.setCachedWidgetMeta(
           `table:${this.tableBodyText}`,

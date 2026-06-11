@@ -49,6 +49,7 @@ import {
   startCompletion,
 } from "@codemirror/autocomplete";
 import { openSearchPanel } from "@codemirror/search";
+import { syntaxTree } from "@codemirror/language";
 import { EditorSelection } from "@codemirror/state";
 import type { EditorView } from "@codemirror/view";
 import { reloadAllWidgets } from "./codemirror/code_widget.ts";
@@ -95,6 +96,84 @@ function withCollapsedBlockSnap(
 }
 
 /**
+ * Re-pad a markdown table's source so the columns/pipes line up. Preserves any
+ * left/center/right alignment markers (`:---`, `:---:`, `---:`) in the
+ * delimiter row. Returns the formatted table, or null if `src` doesn't look
+ * like a well-formed table.
+ */
+function formatMarkdownTable(src: string): string | null {
+  const lines = src.replace(/\n+$/, "").split("\n").filter((l) =>
+    l.trim().length > 0
+  );
+  if (lines.length < 2) return null;
+
+  const splitRow = (line: string): string[] => {
+    let s = line.trim();
+    if (s.startsWith("|")) s = s.slice(1);
+    if (s.endsWith("|") && !s.endsWith("\\|")) s = s.slice(0, -1);
+    return s.split(/(?<!\\)\|/).map((c) => c.trim());
+  };
+
+  const isDelimiterCells = (cells: string[]): boolean =>
+    cells.length > 0 && cells.every((c) => /^:?-+:?$/.test(c));
+
+  const parsed = lines.map(splitRow);
+  let delimIdx = -1;
+  for (let i = 1; i < parsed.length; i++) {
+    if (isDelimiterCells(parsed[i])) {
+      delimIdx = i;
+      break;
+    }
+  }
+  if (delimIdx === -1) return null;
+
+  const colCount = Math.max(...parsed.map((r) => r.length));
+
+  const aligns: ("left" | "right" | "center" | "none")[] = [];
+  for (let c = 0; c < colCount; c++) {
+    const cell = parsed[delimIdx][c] ?? "";
+    const l = cell.startsWith(":");
+    const r = cell.endsWith(":");
+    aligns[c] = l && r ? "center" : r ? "right" : l ? "left" : "none";
+  }
+
+  const widths: number[] = new Array(colCount).fill(3);
+  parsed.forEach((row, i) => {
+    if (i === delimIdx) return;
+    for (let c = 0; c < colCount; c++) {
+      widths[c] = Math.max(widths[c], (row[c] ?? "").length);
+    }
+  });
+
+  const padContent = (text: string, w: number, align: string): string => {
+    const pad = w - text.length;
+    if (pad <= 0) return text;
+    if (align === "right") return " ".repeat(pad) + text;
+    if (align === "center") {
+      const left = Math.floor(pad / 2);
+      return " ".repeat(left) + text + " ".repeat(pad - left);
+    }
+    return text + " ".repeat(pad);
+  };
+
+  const delimCell = (w: number, align: string): string => {
+    if (align === "center") return ":" + "-".repeat(Math.max(w - 2, 1)) + ":";
+    if (align === "right") return "-".repeat(Math.max(w - 1, 1)) + ":";
+    if (align === "left") return ":" + "-".repeat(Math.max(w - 1, 1));
+    return "-".repeat(w);
+  };
+
+  return parsed
+    .map((row, i) => {
+      const cells = i === delimIdx
+        ? widths.map((w, c) => delimCell(w, aligns[c]))
+        : widths.map((w, c) => padContent(row[c] ?? "", w, aligns[c]));
+      return "| " + cells.join(" | ") + " |";
+    })
+    .join("\n");
+}
+
+/**
  * Registers client-side editor commands with the CommandHook. These were
  * previously defined in the editor plug; moving them into the client makes
  * them synchronous (no async round-trip through the plug Web Worker) and
@@ -123,6 +202,41 @@ export function registerEditorCommands(
       const v = view();
       if (acceptCompletion(v)) return true;
       return insertNewlineAndIndent(v);
+    },
+  });
+
+  // Re-pad the table at the cursor so its columns line up in the source.
+  hook.registerCommand({
+    name: "Table: Format",
+    key: "Alt-Shift-f",
+    mac: "Alt-Shift-f",
+    requireMode: "rw",
+    requireEditor: "page",
+    run: () => {
+      const v = view();
+      const state = v.state;
+      const pos = state.selection.main.head;
+      let range: { from: number; to: number } | null = null;
+      syntaxTree(state).iterate({
+        enter: (node) => {
+          if (node.name === "Table" && node.from <= pos && pos <= node.to) {
+            range = { from: node.from, to: node.to };
+          }
+        },
+      });
+      if (!range) {
+        client.ui.flashNotification(
+          "Place the cursor inside a table to format it",
+          "error",
+        );
+        return true;
+      }
+      const { from, to } = range;
+      const src = state.sliceDoc(from, to);
+      const formatted = formatMarkdownTable(src);
+      if (!formatted || formatted === src) return true;
+      v.dispatch({ changes: { from, to, insert: formatted } });
+      return true;
     },
   });
 
