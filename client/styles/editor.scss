@@ -347,13 +347,13 @@
   // ── Obsidian-style frontmatter properties panel ──────────────────────────
   .sb-frontmatter-panel {
     display: block;
-    border: 1px solid var(--editor-border-color, #ddd);
+    border: 1px solid var(--color-border-tertiary, #ddd);
     border-radius: 6px;
     margin: 4px 0 8px 0;
     overflow: hidden;
     font-size: 0.9em;
     cursor: pointer;
-    background: var(--editor-bg, #fff);
+    background: var(--color-background-primary, #fff);
 
     &:hover {
       border-color: var(--editor-link-color, #4a90d9);
@@ -369,8 +369,8 @@
       text-transform: uppercase;
       letter-spacing: 0.05em;
       color: var(--editor-meta-color, #888);
-      border-bottom: 1px solid var(--editor-border-color, #ddd);
-      background: var(--editor-code-background, #f6f6f6);
+      border-bottom: 1px solid var(--color-border-tertiary, #ddd);
+      background: var(--color-background-secondary, #f6f6f6);
 
       span {
         flex: 1;
@@ -390,7 +390,7 @@
       display: flex;
       align-items: baseline;
       padding: 4px 10px;
-      border-bottom: 1px solid var(--editor-border-color, #eee);
+      border-bottom: 1px solid var(--color-border-tertiary, #eee);
       gap: 8px;
 
       &:last-child {
@@ -398,7 +398,7 @@
       }
 
       &:hover {
-        background: var(--editor-hover-bg, rgba(0, 0, 0, 0.03));
+        background: var(--color-background-secondary, rgba(0, 0, 0, 0.03));
       }
     }
 
@@ -424,7 +424,7 @@
     .sb-fm-number,
     .sb-fm-date,
     .sb-fm-object {
-      color: var(--editor-fg, #333);
+      color: var(--color-text-primary, #333);
     }
 
     .sb-fm-null {
@@ -436,7 +436,7 @@
       padding: 1px 8px;
       border-radius: 12px;
       font-size: 0.82em;
-      background: var(--editor-tag-background, rgba(74, 144, 217, 0.12));
+      background: var(--editor-hashtag-background-color, rgba(74, 144, 217, 0.12));
       color: var(--editor-link-color, #4a90d9);
       white-space: nowrap;
     }
