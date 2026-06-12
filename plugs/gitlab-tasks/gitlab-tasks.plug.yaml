@@ -1,0 +1,33 @@
+name: gitlab-tasks
+requiredPermissions:
+  - fetch
+functions:
+  pushTasks:
+    path: gitlab_tasks.ts:pushTasks
+    command:
+      name: "GitLab: Push Tasks"
+      requireMode: rw
+  pullClosedIssues:
+    path: gitlab_tasks.ts:pullClosedIssues
+    command:
+      name: "GitLab: Pull Closed Issues"
+      requireMode: rw
+  fetchMembers:
+    path: gitlab_tasks.ts:fetchMembers
+    command:
+      name: "GitLab: Fetch Project Members"
+      requireMode: rw
+  fetchRepositories:
+    path: gitlab_tasks.ts:fetchRepositories
+    command:
+      name: "GitLab: Fetch Active Repositories"
+      requireMode: rw
+  fetchWikiPages:
+    path: gitlab_tasks.ts:fetchWikiPages
+    command:
+      name: "GitLab: Fetch Wiki Pages"
+      requireMode: rw
+  testConnection:
+    path: gitlab_tasks.ts:testConnection
+    command:
+      name: "GitLab: Test Connection"
