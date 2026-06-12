@@ -20,7 +20,10 @@
  */
 
 import type { ParseTree } from "@silverbulletmd/silverbullet/lib/tree";
-import { renderToText } from "@silverbulletmd/silverbullet/lib/tree";
+import {
+  normalizeTableRow,
+  renderToText,
+} from "@silverbulletmd/silverbullet/lib/tree";
 
 // --- Errors -----------------------------------------------------------------
 
@@ -438,6 +441,11 @@ export function computeTableFormulas(tree: ParseTree): void {
   const rowNodes = (tree.children ?? []).filter(
     (c) => c.type === "TableHeader" || c.type === "TableRow",
   );
+  // Materialize empty cells (the parser emits no TableCell node for `||`),
+  // otherwise cell references would shift left on rows with empty cells.
+  for (const row of rowNodes) {
+    normalizeTableRow(row);
+  }
   const cellNodes: ParseTree[][] = rowNodes.map((row) =>
     (row.children ?? []).filter((c) => c.type === "TableCell")
   );

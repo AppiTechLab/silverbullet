@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { TableCalculator } from "./table_calc.ts";
+import { computeTableFormulas, TableCalculator } from "./table_calc.ts";
+import { parseMarkdown } from "../markdown_parser/parser.ts";
+import { renderToText } from "@silverbulletmd/silverbullet/lib/tree";
 
 // Helper: row 0 is the header (referenced as row 1)
 function calc(grid: string[][]) {
@@ -160,5 +162,11 @@ describe("TableCalculator", () => {
       ["=0.1+0.2"],
     ]);
     expect(r[1][0]).toBe("0.3");
+  });
+
+  it("does not shift references on rows with empty cells (tree-level)", () => {
+    const tree = parseMarkdown("|h1|h2|h3|\n|-|-|-|\n|5||=a2+10|\n");
+    computeTableFormulas(tree);
+    expect(renderToText(tree)).toContain("15");
   });
 });
