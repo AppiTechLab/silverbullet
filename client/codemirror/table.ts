@@ -19,6 +19,7 @@ import {
   attachWidgetEventHandlers,
   buildTranslateUrls,
 } from "./widget_util.ts";
+import { computeTableFormulas } from "./table_calc.ts";
 
 // Count a table's columns from its header row (falling back to the first body
 // row), used when appending a new empty row.
@@ -71,6 +72,13 @@ class TableViewWidget extends WidgetType {
         syntaxExtensions: this.client.config.get("syntaxExtensions", {}),
       },
     ).then((t) => {
+      // CalcCraft-style spreadsheet formulas: compute `=...` cells for the
+      // rendered view (the markdown source keeps the formulas).
+      try {
+        computeTableFormulas(t);
+      } catch (e) {
+        console.warn("Table formula evaluation failed", e);
+      }
       dom.innerHTML = renderMarkdownToHtml(t, {
         // Annotate every element with its position so we can use it to put
         // the cursor there when the user clicks on the table.
