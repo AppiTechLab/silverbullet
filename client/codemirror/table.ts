@@ -20,6 +20,7 @@ import {
   buildTranslateUrls,
 } from "./widget_util.ts";
 import { computeTableFormulas } from "./table_calc.ts";
+import { attachInlineTableEditing } from "./table_inline_edit.ts";
 
 // Count a table's columns from its header row (falling back to the first body
 // row), used when appending a new empty row.
@@ -89,6 +90,22 @@ class TableViewWidget extends WidgetType {
       setTimeout(() => {
         // Give it a tick to render
         attachWidgetEventHandlers(dom, this.client, this.tableBodyText);
+
+        // Inline cell editing: click a cell to edit it in place (Tab / Shift-Tab
+        // / Enter to move between cells), writing back to the source on blur.
+        if (this.t.from != null && this.t.to != null) {
+          try {
+            attachInlineTableEditing(
+              dom,
+              this.client,
+              this.t.from,
+              this.t.to,
+              this.client.editorView.state.sliceDoc(this.t.from, this.t.to),
+            );
+          } catch (e) {
+            console.warn("Inline table editing setup failed", e);
+          }
+        }
 
         // "+ Add row" affordance: appends an empty row to the table source and
         // drops the cursor into its first cell, ready to type.

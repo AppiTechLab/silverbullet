@@ -523,6 +523,26 @@
     border: 1px solid var(--nav-border-color);
   }
 
+  // Inline-editable table cells
+  .sb-table-cell-editable {
+    cursor: text;
+  }
+
+  .sb-table-cell-editable:hover {
+    background: var(--editor-table-head-background-color, rgba(128, 128, 128, 0.06));
+  }
+
+  // The cell currently being edited (contains the text input)
+  .sb-table-cell-editable:has(input.sb-cell-input) {
+    outline: 2px solid var(--editor-link-color, #4a9eff);
+    outline-offset: -2px;
+    background: var(--root-background-color, #fff);
+  }
+
+  input.sb-cell-input {
+    white-space: nowrap;
+  }
+
   // Table alignment classes for justified tables
   .sb-table-align-left {
     text-align: left;
