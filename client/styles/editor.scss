@@ -543,6 +543,12 @@
     white-space: nowrap;
   }
 
+  .sb-table-toolbar .sb-table-tb-btn:hover {
+    background: var(--editor-link-color, #4a9eff) !important;
+    color: #fff !important;
+    border-color: var(--editor-link-color, #4a9eff) !important;
+  }
+
   // Table alignment classes for justified tables
   .sb-table-align-left {
     text-align: left;

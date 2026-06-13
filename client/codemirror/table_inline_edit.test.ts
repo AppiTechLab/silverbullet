@@ -1,8 +1,14 @@
 import { describe, expect, it } from "vitest";
 import {
   buildTableRow,
+  deleteColumn,
+  deleteRow,
   escapeCell,
+  insertColumn,
+  insertRow,
   isDelimiterLine,
+  moveColumn,
+  moveRow,
   parseTable,
   serializeTable,
   splitTableRow,
@@ -90,5 +96,68 @@ describe("round-trip", () => {
     m.rows[0][1] = "42";
     const out = serializeTable(m);
     expect(out).toBe("| name | qty |\n| --- | --- |\n| apple | 42 |");
+  });
+});
+
+describe("row operations", () => {
+  const base = () =>
+    parseTable("| a | b |\n| --- | --- |\n| 1 | 2 |\n| 3 | 4 |")!;
+
+  it("insertRow adds an empty body row at the index", () => {
+    const m = insertRow(base(), 1);
+    expect(m.rows).toEqual([["1", "2"], ["", ""], ["3", "4"]]);
+  });
+  it("insertRow clamps out-of-range indices", () => {
+    expect(insertRow(base(), 99).rows.length).toBe(3);
+    expect(insertRow(base(), -5).rows[0]).toEqual(["", ""]);
+  });
+  it("deleteRow removes a body row", () => {
+    expect(deleteRow(base(), 0).rows).toEqual([["3", "4"]]);
+  });
+  it("deleteRow is a no-op out of range", () => {
+    expect(deleteRow(base(), 9).rows.length).toBe(2);
+  });
+  it("moveRow swaps rows", () => {
+    expect(moveRow(base(), 0, 1).rows).toEqual([["3", "4"], ["1", "2"]]);
+    expect(moveRow(base(), 0, -1).rows).toEqual([["1", "2"], ["3", "4"]]); // no-op at top
+  });
+  it("does not mutate the input model", () => {
+    const m = base();
+    insertRow(m, 0);
+    expect(m.rows.length).toBe(2);
+  });
+});
+
+describe("column operations", () => {
+  const base = () =>
+    parseTable("| a | b |\n|:--|--:|\n| 1 | 2 |\n| 3 | 4 |")!;
+
+  it("insertColumn grows header, rows, delimiter and cols", () => {
+    const m = insertColumn(base(), 1);
+    expect(m.cols).toBe(3);
+    expect(m.header).toEqual(["a", "", "b"]);
+    expect(m.rows).toEqual([["1", "", "2"], ["3", "", "4"]]);
+    expect(m.delimiter).toBe("| :--- | --- | ---: |");
+  });
+  it("deleteColumn shrinks everything and preserves alignment", () => {
+    const m = deleteColumn(base(), 0);
+    expect(m.cols).toBe(1);
+    expect(m.header).toEqual(["b"]);
+    expect(m.rows).toEqual([["2"], ["4"]]);
+    expect(m.delimiter).toBe("| ---: |");
+  });
+  it("deleteColumn refuses to remove the last column", () => {
+    const one = parseTable("| a |\n| --- |\n| 1 |")!;
+    expect(deleteColumn(one, 0).cols).toBe(1);
+  });
+  it("moveColumn swaps header, rows and alignment", () => {
+    const m = moveColumn(base(), 0, 1);
+    expect(m.header).toEqual(["b", "a"]);
+    expect(m.rows).toEqual([["2", "1"], ["4", "3"]]);
+    expect(m.delimiter).toBe("| ---: | :--- |");
+  });
+  it("round-trips through serializeTable", () => {
+    const out = serializeTable(insertColumn(base(), 2));
+    expect(parseTable(out)!.cols).toBe(3);
   });
 });
