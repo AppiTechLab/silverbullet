@@ -502,6 +502,9 @@
 
   table {
     width: 100%;
+    // Never let a wide table spill past the page; columns shrink and cell
+    // content wraps (see th/td below) so the table fits the available width.
+    max-width: 100%;
     border-collapse: collapse;
     border: 1px solid var(--nav-border-color);
   }
@@ -519,7 +522,11 @@
   th,
   td {
     padding: 8px;
-    white-space: nowrap;
+    // Allow content to wrap so many-column tables can fit the page width.
+    // Short cells still render on one line (wrapping only kicks in when needed);
+    // long unbreakable tokens (e.g. URLs) break rather than force a scroll.
+    white-space: normal;
+    overflow-wrap: anywhere;
     border: 1px solid var(--nav-border-color);
   }
 
