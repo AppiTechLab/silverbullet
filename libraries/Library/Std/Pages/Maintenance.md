@@ -14,12 +14,4 @@ ${some(query[[
 ]]) or "No aspiring pages, all good!"}
 
 # Conflicting copies
-These are pages that have conflicting copies (as a result of sync). Have a look at them as well as their original (non-conflicting) versions and decide which one to keep.
-
-${some(query[[
-  from p = index.pages()
-  where p.name:find("%.conflicted:")
-  select template.new[==[
-    * [[${name:gsub("%.conflicted:.+$", "")}]]: conflict copy [[${name}]]
-]==](p)
-]]) or "No conflicting pages!"}
+Pages and documents with conflicting copies (as a result of sync) are listed on the dedicated [[^Library/Std/Pages/Conflicts]] page, where you can review each copy alongside its original and decide which one to keep.

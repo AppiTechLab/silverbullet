@@ -21,6 +21,16 @@ functions:
         order: 2
         label: "Sync File"
 
+  showConflictsCommand:
+    path: "./sync.ts:showConflictsCommand"
+    command:
+      name: "Sync: Show Conflicts"
+      menu:
+        location: space
+        group: "1_sync"
+        order: 3
+        label: "Show Conflicts"
+
   spaceSyncComplete:
     path: "./sync.ts:spaceSyncComplete"
     events:

@@ -27,9 +27,9 @@ services:
       - SB_USERS=${SB_USERS:?Set SB_USERS in .env, e.g. SB_USERS=antoine:change-me,bob:change-me}
       # Note: the image already sets SB_HOSTNAME=0.0.0.0 (the -L0.0.0.0
       # equivalent) so it accepts connections from Traefik. Port 3000 is
-      # intentionally NOT published on the host: only Traefik (HTTPS) reaches it.
+      # intentional- space:/space ly NOT published on the host: only Traefik (HTTPS) reaches it.
     volumes:
-      - C:\Tools\wiki:/space
+      - space:/space 
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.silverbullet.rule=PathPrefix(`/`)"

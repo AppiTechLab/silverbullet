@@ -17,6 +17,10 @@ export async function syncFileCommand() {
   await editor.flashNotification("Done.");
 }
 
+export async function showConflictsCommand() {
+  await editor.navigate("Library/Std/Pages/Conflicts");
+}
+
 export async function spaceSyncComplete(message: { operations: number }) {
   if (message.operations > 0) {
     // Update the page list
@@ -55,7 +59,8 @@ export async function updateSyncStatus(event: {
 
 export async function reportSyncConflict({ path }: { path: string }) {
   await editor.flashNotification(
-    `Sync: conflict detected for ${path} - conflict copy created`,
+    `Sync conflict for ${path} — a conflict copy was created. ` +
+      `Run "Sync: Show Conflicts" to review.`,
     "error",
   );
 }
