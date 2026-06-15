@@ -171,6 +171,22 @@ func buildConfig(bundledFiles fs.FS, args []string, buildTime string) *server.Se
 			rootSpaceConfig.Permissions = perms
 			rootSpaceConfig.AdminUser = adminUser
 			log.Printf("[permissions] Folder-level permissions enabled, admin: %s", adminUser)
+
+			// Runtime user store: load persisted users, then seed any env users
+			// that aren't already present, then point the authorizer at the store
+			// so accounts created/disabled at runtime take effect without a
+			// restart. The env (SB_USER/SB_USERS) only bootstraps the store.
+			userStore := server.NewSpaceUsers(rootSpaceConfig.SpaceFolderPath)
+			if loadErr := userStore.Load(); loadErr != nil {
+				log.Printf("[users] Warning: could not load users file: %v", loadErr)
+			}
+			userStore.Seed(users)
+			if saveErr := userStore.Save(); saveErr != nil {
+				log.Printf("[users] Warning: could not save users file: %v", saveErr)
+			}
+			rootSpaceConfig.Users = userStore
+			rootSpaceConfig.Authorize = userStore.Authenticate
+			log.Printf("[users] Runtime user store enabled (%d users)", len(userStore.List()))
 		}
 
 		if os.Getenv("SB_LOCKOUT_LIMIT") != "" {

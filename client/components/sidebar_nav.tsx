@@ -2,6 +2,7 @@ import { useState, useRef } from "preact/hooks";
 import type { PageMeta } from "@silverbulletmd/silverbullet/type/index";
 import { emojiMap } from "../codemirror/emojiList.ts";
 import { PermissionsPanel } from "./permissions_panel.tsx";
+import { UsersPanel } from "./users_panel.tsx";
 import { parseFolderMeta } from "../lib/folder_icon.ts";
 
 const PAGE_EMOJI_RE = /^(:[a-z0-9_+-]+:)\s*/;
@@ -331,6 +332,15 @@ export function SidebarNav({
     return (
       <div id="sb-nav-panel">
         <PermissionsPanel currentUser={currentUser} />
+      </div>
+    );
+  }
+
+  // ── Users view ─────────────────────────────────────────────────────────────
+  if (activeSection === "users") {
+    return (
+      <div id="sb-nav-panel">
+        <UsersPanel currentUser={currentUser} />
       </div>
     );
   }

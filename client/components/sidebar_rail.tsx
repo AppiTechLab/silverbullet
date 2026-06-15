@@ -102,6 +102,15 @@ export function SidebarRail(
           <i className="ti ti-shield" />
         </button>
       )}
+      {isAdmin && (
+        <button
+          className={`sb-rail-btn${activeSection === "users" ? " active" : ""}`}
+          title="Users"
+          onClick={() => onSectionChange("users")}
+        >
+          <i className="ti ti-users" />
+        </button>
+      )}
       <button
         className={`sb-rail-btn${showToc ? " active" : ""}`}
         title="Table of Contents"

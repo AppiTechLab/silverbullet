@@ -182,6 +182,124 @@ func Router(config *ServerConfig) chi.Router {
 		render.JSON(w, r, map[string]string{"status": "ok"})
 	})
 
+	// Users API (admin-only). Account lifecycle lives in the user store; admin
+	// status is delegated to the permissions store's "_admin" folder so there is
+	// a single source of truth for who is an admin.
+	routes.Get("/.api/users", func(w http.ResponseWriter, r *http.Request) {
+		spaceConfig := spaceConfigFromContext(r.Context())
+		username := usernameFromContext(r.Context())
+		if !spaceConfig.Permissions.IsAdmin(username) {
+			http.Error(w, "Forbidden", http.StatusForbidden)
+			return
+		}
+		type userOut struct {
+			Username string `json:"username"`
+			Disabled bool   `json:"disabled"`
+			Admin    bool   `json:"admin"`
+			Created  string `json:"created,omitempty"`
+		}
+		users := spaceConfig.Users.List()
+		out := make([]userOut, 0, len(users))
+		for _, u := range users {
+			out = append(out, userOut{
+				Username: u.Username,
+				Disabled: u.Disabled,
+				Admin:    spaceConfig.Permissions.IsAdmin(u.Username),
+				Created:  u.Created,
+			})
+		}
+		render.JSON(w, r, out)
+	})
+
+	routes.Post("/.api/users", func(w http.ResponseWriter, r *http.Request) {
+		spaceConfig := spaceConfigFromContext(r.Context())
+		username := usernameFromContext(r.Context())
+		if !spaceConfig.Permissions.IsAdmin(username) {
+			http.Error(w, "Forbidden", http.StatusForbidden)
+			return
+		}
+		var body struct {
+			Action   string `json:"action"`
+			Username string `json:"username"`
+			Password string `json:"password"`
+			Value    bool   `json:"value"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+			http.Error(w, "Bad request", http.StatusBadRequest)
+			return
+		}
+		if body.Username == "" {
+			http.Error(w, "username is required", http.StatusBadRequest)
+			return
+		}
+
+		var opErr error
+		switch body.Action {
+		case "create":
+			if opErr = spaceConfig.Users.Create(body.Username, body.Password); opErr == nil && body.Value {
+				opErr = spaceConfig.Permissions.SetFolderPermission("_admin", body.Username, PermWrite)
+			}
+		case "setPassword":
+			opErr = spaceConfig.Users.SetPassword(body.Username, body.Password)
+		case "setDisabled":
+			// Don't allow disabling the last remaining admin (would lock everyone out).
+			if body.Value && spaceConfig.Permissions.IsAdmin(body.Username) && spaceConfig.Permissions.AdminCount() <= 1 {
+				http.Error(w, "cannot disable the last admin", http.StatusBadRequest)
+				return
+			}
+			opErr = spaceConfig.Users.SetDisabled(body.Username, body.Value)
+		case "setAdmin":
+			if body.Value {
+				opErr = spaceConfig.Permissions.SetFolderPermission("_admin", body.Username, PermWrite)
+			} else {
+				if spaceConfig.Permissions.IsAdmin(body.Username) && spaceConfig.Permissions.AdminCount() <= 1 {
+					http.Error(w, "cannot remove the last admin", http.StatusBadRequest)
+					return
+				}
+				opErr = spaceConfig.Permissions.DeleteFolderUser("_admin", body.Username)
+			}
+		default:
+			http.Error(w, "action must be create, setPassword, setDisabled, or setAdmin", http.StatusBadRequest)
+			return
+		}
+		if opErr != nil {
+			http.Error(w, opErr.Error(), http.StatusBadRequest)
+			return
+		}
+		render.JSON(w, r, map[string]string{"status": "ok"})
+	})
+
+	routes.Delete("/.api/users", func(w http.ResponseWriter, r *http.Request) {
+		spaceConfig := spaceConfigFromContext(r.Context())
+		username := usernameFromContext(r.Context())
+		if !spaceConfig.Permissions.IsAdmin(username) {
+			http.Error(w, "Forbidden", http.StatusForbidden)
+			return
+		}
+		var body struct {
+			Username string `json:"username"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+			http.Error(w, "Bad request", http.StatusBadRequest)
+			return
+		}
+		if body.Username == "" {
+			http.Error(w, "username is required", http.StatusBadRequest)
+			return
+		}
+		if spaceConfig.Permissions.IsAdmin(body.Username) && spaceConfig.Permissions.AdminCount() <= 1 {
+			http.Error(w, "cannot delete the last admin", http.StatusBadRequest)
+			return
+		}
+		if err := spaceConfig.Users.Delete(body.Username); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		// Tidy up: drop any _admin grant the deleted user held.
+		_ = spaceConfig.Permissions.DeleteFolderUser("_admin", body.Username)
+		render.JSON(w, r, map[string]string{"status": "ok"})
+	})
+
 	// Shell endpoint
 	routes.Post("/.shell", handleShellEndpoint)
 

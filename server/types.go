@@ -72,6 +72,9 @@ type SpaceConfig struct {
 	Permissions *SpacePermissions
 	AdminUser   string
 
+	// Runtime user store (nil = users come only from env, no live management)
+	Users *SpaceUsers
+
 	// Auth temporary objects
 	JwtIssuer    *Authenticator
 	LockoutTimer *LockoutTimer

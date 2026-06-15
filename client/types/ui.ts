@@ -34,7 +34,8 @@ export type ActiveSection =
   | "tasks"
   | "templates"
   | "attachments"
-  | "permissions";
+  | "permissions"
+  | "users";
 
 export type AppViewState = {
   current?: {

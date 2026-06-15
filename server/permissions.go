@@ -253,6 +253,25 @@ func (sp *SpacePermissions) IsAdmin(username string) bool {
 	return false
 }
 
+// AdminCount returns how many users currently have admin rights (write on the
+// virtual _admin folder). Used to refuse removing/disabling the last admin.
+func (sp *SpacePermissions) AdminCount() int {
+	if sp == nil {
+		return 0
+	}
+	sp.mu.RLock()
+	defer sp.mu.RUnlock()
+	n := 0
+	if perms, ok := sp.store["_admin"]; ok {
+		for _, p := range perms {
+			if p == string(PermWrite) {
+				n++
+			}
+		}
+	}
+	return n
+}
+
 // GetAll returns a deep copy of the full permissions store (including _admin).
 func (sp *SpacePermissions) GetAll() map[string]map[string]string {
 	if sp == nil {

@@ -40,10 +40,11 @@ func handleFsList(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-		// Filter: always hide _permissions.json; hide files in PermNone folders.
+		// Filter: always hide _permissions.json and _users.json; hide files in
+		// PermNone folders.
 		filtered := make([]FileMeta, 0, len(files))
 		for _, f := range files {
-			if f.Name == permissionsFileName {
+			if f.Name == permissionsFileName || f.Name == usersFileName {
 				continue
 			}
 			if spaceConfig.Permissions.GetFolderPermission(f.Name, username) == PermNone {
@@ -66,8 +67,8 @@ func handleFsGet(w http.ResponseWriter, r *http.Request) {
 	spaceConfig := spaceConfigFromContext(r.Context())
 	username := usernameFromContext(r.Context())
 
-	// Block direct access to the permissions file.
-	if path == permissionsFileName {
+	// Block direct access to the permissions and users files.
+	if path == permissionsFileName || path == usersFileName {
 		http.Error(w, "Forbidden", http.StatusForbidden)
 		return
 	}
@@ -119,8 +120,8 @@ func handleFsPut(w http.ResponseWriter, r *http.Request) {
 	spaceConfig := spaceConfigFromContext(r.Context())
 	username := usernameFromContext(r.Context())
 
-	// Block direct access to the permissions file.
-	if path == permissionsFileName {
+	// Block direct access to the permissions and users files.
+	if path == permissionsFileName || path == usersFileName {
 		http.Error(w, "Forbidden", http.StatusForbidden)
 		return
 	}
@@ -157,8 +158,8 @@ func handleFsDelete(w http.ResponseWriter, r *http.Request) {
 	spaceConfig := spaceConfigFromContext(r.Context())
 	username := usernameFromContext(r.Context())
 
-	// Block direct access to the permissions file.
-	if path == permissionsFileName {
+	// Block direct access to the permissions and users files.
+	if path == permissionsFileName || path == usersFileName {
 		http.Error(w, "Forbidden", http.StatusForbidden)
 		return
 	}
