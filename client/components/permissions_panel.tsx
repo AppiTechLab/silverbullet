@@ -10,7 +10,7 @@ async function apiFetch(
 ): Promise<any> {
   const opts: RequestInit = { method, headers: { "Content-Type": "application/json" } };
   if (body) opts.body = JSON.stringify(body);
-  const res = await fetch("/.api/permissions", opts);
+  const res = await fetch(new URL(".api/permissions", document.baseURI), opts);
   if (!res.ok) throw new Error(await res.text());
   return res.json();
 }

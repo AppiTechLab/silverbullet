@@ -13,7 +13,7 @@ async function apiFetch(method: string, body?: object): Promise<any> {
     headers: { "Content-Type": "application/json" },
   };
   if (body) opts.body = JSON.stringify(body);
-  const res = await fetch("/.api/users", opts);
+  const res = await fetch(new URL(".api/users", document.baseURI), opts);
   if (!res.ok) throw new Error(await res.text());
   // DELETE/POST return a small JSON status; GET returns the list.
   const text = await res.text();
