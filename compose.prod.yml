@@ -1,0 +1,26 @@
+services:
+  silverbullet:
+    build: .
+    restart: unless-stopped
+    environment:
+      - SB_USERS=${SB_USERS}
+      - SB_URL_PREFIX=/sbullet
+      - SB_STRICT_TLS=false
+    volumes:
+      - sbullet_data:/space
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.sbullet.entrypoints=interne"
+      - "traefik.http.routers.sbullet.rule=Host(`vlbelappidc.hevs.ch`) && PathPrefix(`/sbullet`)"
+#      - "traefik.http.middlewares.sbullet-strip.stripprefix.prefixes=/sbullet"
+#      - "traefik.http.routers.sbullet.middlewares=sbullet-strip"
+      - "traefik.http.services.sbullet.loadbalancer.server.port=3000"
+    networks:
+      - traefik-public
+
+volumes:
+  sbullet_data:
+
+networks:
+  traefik-public:
+    external: true
